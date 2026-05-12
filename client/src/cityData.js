@@ -4,6 +4,7 @@ export const DFW_CITIES = [
   { city: 'Fort Worth',          county: 'Tarrant',  lat: 32.7555, lon: -97.3308 },
   { city: 'Arlington',           county: 'Tarrant',  lat: 32.7357, lon: -97.1081 },
   { city: 'Grapevine',           county: 'Tarrant',  lat: 32.9342, lon: -97.0781 },
+  { city: 'DFW Airport',         county: 'Tarrant',  lat: 32.8998, lon: -97.0403 },
   { city: 'Colleyville',         county: 'Tarrant',  lat: 32.8882, lon: -97.1500 },
   { city: 'Southlake',           county: 'Tarrant',  lat: 32.9412, lon: -97.1320 },
   { city: 'Keller',              county: 'Tarrant',  lat: 32.9343, lon: -97.2294 },
