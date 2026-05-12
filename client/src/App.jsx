@@ -114,6 +114,7 @@ export default function App() {
           <div>
             <h1>EMS Outreach</h1>
             <span className="header-sub">Baylor Scott &amp; White Medical Center — Grapevine</span>
+            <span className="header-tagline">A Baylor Grapevine EMS Solution</span>
           </div>
         </div>
         <div className="month-selector">

@@ -25,6 +25,7 @@ body {
 .header-icon { font-size: 28px; }
 .app-header h1 { font-size: 18px; font-weight: 700; line-height: 1.2; }
 .header-sub { font-size: 11px; opacity: .75; }
+.header-tagline { font-size: 10px; opacity: .55; font-style: italic; letter-spacing: .3px; }
 
 .month-selector {
   display: flex;
