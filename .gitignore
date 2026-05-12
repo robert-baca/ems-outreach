@@ -1,0 +1,11 @@
+node_modules/
+client/node_modules/
+server/node_modules/
+client/dist/
+server/data.json
+server/custom_cities.json
+server/counties_cache.json
+.env
+.env.local
+.vercel
+.claude/
