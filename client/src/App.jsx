@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import MapView from './components/MapView.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import ImportModal from './components/ImportModal.jsx';
+import QuickEntryModal from './components/QuickEntryModal.jsx';
 import { MONTHS } from './cityData.js';
 
 const now = new Date();
@@ -13,16 +14,18 @@ function prevMonthYear(month, year) {
 export default function App() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear]   = useState(now.getFullYear());
-  const [stats, setStats]           = useState([]);
-  const [prevStats, setPrevStats]   = useState([]);
-  const [transports, setTransports] = useState([]);
-  const [loading, setLoading]       = useState(false);
+  const [stats, setStats]               = useState([]);
+  const [prevStats, setPrevStats]       = useState([]);
+  const [transports, setTransports]     = useState([]);
+  const [agencyStats, setAgencyStats]   = useState([]);
+  const [agencyTransports, setAgencyTransports] = useState([]);
+  const [loading, setLoading]           = useState(false);
   const [selectedCity, setSelectedCity] = useState(null);
   const [cityHistory, setCityHistory]   = useState([]);
   const [customCities, setCustomCities] = useState([]);
   const [showImport, setShowImport]     = useState(false);
+  const [showQuickEntry, setShowQuickEntry] = useState(false);
 
-  // Load custom (geocoded) cities once on mount
   useEffect(() => {
     fetch('/api/cities/custom').then(r => r.json()).then(setCustomCities).catch(() => {});
   }, []);
@@ -31,14 +34,18 @@ export default function App() {
     setLoading(true);
     const { month: pm, year: py } = prevMonthYear(month, year);
     try {
-      const [sRes, tRes, pRes] = await Promise.all([
-        fetch(`/api/stats?month=${month}&year=${year}`),
-        fetch(`/api/transports?month=${month}&year=${year}`),
-        fetch(`/api/stats?month=${pm}&year=${py}`),
+      const [sRes, tRes, pRes, asRes, atRes] = await Promise.all([
+        fetch(`/api/stats?month=${month}&year=${year}&type=city`),
+        fetch(`/api/transports?month=${month}&year=${year}&type=city`),
+        fetch(`/api/stats?month=${pm}&year=${py}&type=city`),
+        fetch(`/api/stats?month=${month}&year=${year}&type=agency`),
+        fetch(`/api/transports?month=${month}&year=${year}&type=agency`),
       ]);
       setStats(await sRes.json());
       setTransports(await tRes.json());
       setPrevStats(await pRes.json());
+      setAgencyStats(await asRes.json());
+      setAgencyTransports(await atRes.json());
     } finally {
       setLoading(false);
     }
@@ -62,7 +69,28 @@ export default function App() {
       fetch('/api/cities/custom').then(r => r.json()).then(setCustomCities);
     }
     fetchData();
-    if (selectedCity && entry.city.toLowerCase() === selectedCity.toLowerCase()) handleCityClick(selectedCity);
+    if (selectedCity && entry.city?.toLowerCase() === selectedCity.toLowerCase()) {
+      handleCityClick(selectedCity);
+    }
+  };
+
+  const handleQuickSave = async (rows) => {
+    await Promise.all(rows.map(row =>
+      fetch('/api/transports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          city: row.city,
+          county: null,
+          transport_count: row.count,
+          month: row.month,
+          year: row.year,
+          type: row.type,
+          knownCities: [],
+        }),
+      })
+    ));
+    fetchData();
   };
 
   const handleDelete = async (id) => {
@@ -72,7 +100,6 @@ export default function App() {
   };
 
   const handleImportSuccess = (result) => {
-    // Reload custom cities if new ones were geocoded
     if (result.geocoded > 0) {
       fetch('/api/cities/custom').then(r => r.json()).then(setCustomCities);
     }
@@ -96,6 +123,9 @@ export default function App() {
           <input type="number" value={year} min={2020} max={2099}
             onChange={e => setYear(+e.target.value)} />
           {loading && <span className="loading-dot" />}
+          <button className="import-header-btn" onClick={() => setShowQuickEntry(true)}>
+            ✏ Quick Entry
+          </button>
           <button className="import-header-btn" onClick={() => setShowImport(true)}>
             ⬆ Import
           </button>
@@ -105,8 +135,9 @@ export default function App() {
       <div className="app-body">
         <Sidebar
           stats={stats}
-          prevStats={prevStats}
           transports={transports}
+          agencyStats={agencyStats}
+          agencyTransports={agencyTransports}
           selectedCity={selectedCity}
           cityHistory={cityHistory}
           onClearCity={() => setSelectedCity(null)}
@@ -133,6 +164,15 @@ export default function App() {
           customCities={customCities}
           onClose={() => setShowImport(false)}
           onSuccess={result => { handleImportSuccess(result); }}
+        />
+      )}
+
+      {showQuickEntry && (
+        <QuickEntryModal
+          month={month}
+          year={year}
+          onClose={() => setShowQuickEntry(false)}
+          onSave={handleQuickSave}
         />
       )}
     </div>

@@ -474,3 +474,60 @@ body {
   cursor: pointer; transition: background .15s;
 }
 .import-header-btn:hover { background: rgba(255,255,255,.25); }
+
+/* ── Agency add form ── */
+.agency-add-form {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 4px;
+}
+.agency-add-form input[type="text"],
+.agency-add-form input:not([type="number"]) {
+  flex: 1; padding: 7px 10px; border: 1px solid #cbd5e0;
+  border-radius: 6px; font-size: 13px;
+}
+.agency-add-form input[type="number"] {
+  width: 64px; padding: 7px 8px; border: 1px solid #cbd5e0;
+  border-radius: 6px; font-size: 13px; text-align: center;
+}
+.agency-add-form .btn-submit { margin-top: 0; padding: 7px 14px; font-size: 13px; }
+
+.transport-type-badge {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .4px; padding: 1px 6px; border-radius: 8px;
+  color: #fff; margin-left: 6px; vertical-align: middle;
+}
+
+/* ── Quick Entry Modal ── */
+.qe-modal { max-width: 720px; }
+.qe-table-wrap { overflow-x: auto; flex: 1; }
+.qe-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.qe-table th {
+  background: #f7fafc; padding: 8px 10px; text-align: left;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .4px; color: #718096; border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+.qe-table td { padding: 4px 6px; border-bottom: 1px solid #f7fafc; }
+.qe-table tr:hover td { background: #f7fafc; }
+.qe-table input, .qe-table select {
+  width: 100%; padding: 6px 8px; border: 1px solid #e2e8f0;
+  border-radius: 5px; font-size: 13px; background: #fff;
+  outline: none;
+}
+.qe-table input:focus, .qe-table select:focus { border-color: #1a365d; }
+.qe-city  { min-width: 160px; }
+.qe-count { width: 64px !important; text-align: center; }
+.qe-month { min-width: 80px; }
+.qe-year  { width: 72px !important; }
+.qe-type  { min-width: 80px; }
+.qe-remove {
+  background: none; border: none; color: #cbd5e0;
+  font-size: 16px; cursor: pointer; padding: 2px 6px;
+  border-radius: 4px; line-height: 1;
+}
+.qe-remove:hover { color: #e53e3e; }
+.btn-add-row {
+  background: none; border: 1px dashed #cbd5e0; color: #718096;
+  padding: 6px 14px; border-radius: 6px; font-size: 13px;
+  cursor: pointer; transition: all .15s;
+}
+.btn-add-row:hover { border-color: #1a365d; color: #1a365d; }

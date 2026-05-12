@@ -16,6 +16,7 @@ export async function initDB() {
     year INTEGER NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`;
+  await sql`ALTER TABLE transports ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'city'`;
   await sql`CREATE TABLE IF NOT EXISTS custom_cities (
     city TEXT PRIMARY KEY,
     county TEXT,
@@ -24,27 +25,28 @@ export async function initDB() {
   )`;
 }
 
-export async function getTransports({ month, year }) {
+export async function getTransports({ month, year, type = 'city' }) {
   const sql = db();
   await initDB();
   return sql`
     SELECT * FROM transports
     WHERE month = ${+month} AND year = ${+year}
+      AND COALESCE(type, 'city') = ${type}
     ORDER BY created_at DESC
   `;
 }
 
-export async function getStats({ month, year }) {
+export async function getStats({ month, year, type = 'city' }) {
   const sql = db();
   await initDB();
-  const rows = await sql`
+  return sql`
     SELECT city, county, SUM(transport_count)::int AS total
     FROM transports
     WHERE month = ${+month} AND year = ${+year}
+      AND COALESCE(type, 'city') = ${type}
     GROUP BY city, county
     ORDER BY total DESC
   `;
-  return rows;
 }
 
 export async function getCityHistory(city) {
@@ -54,19 +56,20 @@ export async function getCityHistory(city) {
     SELECT year, month, SUM(transport_count)::int AS total
     FROM transports
     WHERE LOWER(city) = LOWER(${city})
+      AND COALESCE(type, 'city') = 'city'
     GROUP BY year, month
     ORDER BY year, month
   `;
   return rows.map(r => ({ year: +r.year, month: +r.month, total: +r.total }));
 }
 
-export async function addTransport({ city, county, transport_count, month, year }) {
+export async function addTransport({ city, county, transport_count, month, year, type = 'city' }) {
   const sql = db();
   await initDB();
   const id = randomUUID();
   const rows = await sql`
-    INSERT INTO transports (id, city, county, transport_count, month, year)
-    VALUES (${id}, ${city}, ${county ?? null}, ${+transport_count || 1}, ${+month}, ${+year})
+    INSERT INTO transports (id, city, county, transport_count, month, year, type)
+    VALUES (${id}, ${city}, ${county ?? null}, ${+transport_count || 1}, ${+month}, ${+year}, ${type})
     RETURNING *
   `;
   return rows[0];
