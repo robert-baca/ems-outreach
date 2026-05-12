@@ -476,6 +476,14 @@ body {
   cursor: pointer; transition: background .15s;
 }
 .import-header-btn:hover { background: rgba(255,255,255,.25); }
+.view-toggle {
+  padding: 5px 12px; background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.8); border: 1px solid rgba(255,255,255,.25);
+  border-radius: 6px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.view-toggle:hover  { background: rgba(255,255,255,.2); }
+.view-toggle.active { background: #fff; color: #1a365d; border-color: #fff; }
 
 /* ── Agency add form ── */
 .agency-add-form {

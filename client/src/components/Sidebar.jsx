@@ -6,7 +6,7 @@ import { MONTHS } from '../cityData.js';
 export default function Sidebar({
   stats, transports, agencyStats, agencyTransports,
   selectedCity, cityHistory, onClearCity,
-  month, year, onAdd, onDelete,
+  month, year, viewMode = 'month', onAdd, onDelete,
 }) {
   const [tab, setTab] = useState('add');
   const [agencyName, setAgencyName] = useState('');
@@ -65,7 +65,7 @@ export default function Sidebar({
         {tab === 'stats' && (
           <>
             <p className="stats-header">
-              {MONTHS[month - 1]} {year} — {totalTransports} city transport{totalTransports !== 1 ? 's' : ''}
+              {viewMode === 'year' ? `${year} Full Year` : `${MONTHS[month - 1]} ${year}`} — {totalTransports} city transport{totalTransports !== 1 ? 's' : ''}
             </p>
             {stats.length === 0 ? (
               <div className="empty-state">No city transports logged this month.</div>
@@ -93,7 +93,7 @@ export default function Sidebar({
         {tab === 'agencies' && (
           <>
             <p className="stats-header">
-              {MONTHS[month - 1]} {year} — {totalAgency} agency transport{totalAgency !== 1 ? 's' : ''}
+              {viewMode === 'year' ? `${year} Full Year` : `${MONTHS[month - 1]} ${year}`} — {totalAgency} agency transport{totalAgency !== 1 ? 's' : ''}
             </p>
 
             <form className="agency-add-form" onSubmit={handleAgencyAdd}>

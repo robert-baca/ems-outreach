@@ -39,13 +39,20 @@ export async function getTransports({ month, year, type = 'city' }) {
 export async function getStats({ month, year, type = 'city' }) {
   const sql = db();
   await initDB();
+  if (month) {
+    return sql`
+      SELECT city, county, SUM(transport_count)::int AS total
+      FROM transports
+      WHERE month = ${+month} AND year = ${+year}
+        AND COALESCE(type, 'city') = ${type}
+      GROUP BY city, county ORDER BY total DESC
+    `;
+  }
   return sql`
     SELECT city, county, SUM(transport_count)::int AS total
     FROM transports
-    WHERE month = ${+month} AND year = ${+year}
-      AND COALESCE(type, 'city') = ${type}
-    GROUP BY city, county
-    ORDER BY total DESC
+    WHERE year = ${+year} AND COALESCE(type, 'city') = ${type}
+    GROUP BY city, county ORDER BY total DESC
   `;
 }
 

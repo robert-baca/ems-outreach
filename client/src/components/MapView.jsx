@@ -55,12 +55,8 @@ function trendLabel(current, prev) {
   return 'No change vs last month';
 }
 
-const hospitalIcon = L.divIcon({
-  html: '<div style="font-size:22px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))">🏥</div>',
-  className: '', iconSize: [26, 26], iconAnchor: [13, 13],
-});
 
-export default function MapView({ stats, prevStats, selectedCity, onCityClick, customCities = [] }) {
+export default function MapView({ stats, prevStats, selectedCity, onCityClick, customCities = [], viewMode = 'month' }) {
   const cityMap = {};
   stats.forEach(({ city, total }) => { cityMap[city.toLowerCase()] = total; });
   const prevMap = {};
@@ -88,7 +84,9 @@ export default function MapView({ stats, prevStats, selectedCity, onCityClick, c
           const prev  = prevMap[city.toLowerCase()] || 0;
           const label = trendLabel(count, prev);
           const isSelected = selectedCity?.toLowerCase() === city.toLowerCase();
-          const icon = makeIcon(count, isSelected);
+          // Normalize yearly totals to monthly scale for consistent dot sizing/coloring
+          const displayCount = viewMode === 'year' ? Math.round(count / 12) : count;
+          const icon = makeIcon(displayCount, isSelected);
 
           return (
             <Marker
@@ -99,21 +97,13 @@ export default function MapView({ stats, prevStats, selectedCity, onCityClick, c
             >
               <Tooltip sticky>
                 <strong>{city}</strong>
-                {count > 0 && <><br />{count} transport{count !== 1 ? 's' : ''} this month</>}
-                {label && <><br /><span style={{ fontSize: 11, color: '#718096' }}>{label}</span></>}
+                {count > 0 && <><br />{count} transport{count !== 1 ? 's' : ''} {viewMode === 'year' ? 'this year' : 'this month'}</>}
+                {viewMode === 'month' && label && <><br /><span style={{ fontSize: 11, color: '#718096' }}>{label}</span></>}
               </Tooltip>
             </Marker>
           );
         })}
 
-        <Marker position={BAYLOR_GRAPEVINE} icon={hospitalIcon}>
-          <Tooltip>
-            <div>
-              <strong>Baylor Scott &amp; White</strong><br />
-              Medical Center — Grapevine
-            </div>
-          </Tooltip>
-        </Marker>
       </MapContainer>
 
       <Legend />

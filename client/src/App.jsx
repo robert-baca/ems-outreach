@@ -12,8 +12,10 @@ function prevMonthYear(month, year) {
 }
 
 export default function App() {
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [year, setYear]   = useState(now.getFullYear());
+  const [month, setMonth]   = useState(now.getMonth() + 1);
+  const [year, setYear]     = useState(now.getFullYear());
+  const [viewMode, setViewMode] = useState('month'); // 'month' | 'year'
+
   const [stats, setStats]               = useState([]);
   const [prevStats, setPrevStats]       = useState([]);
   const [transports, setTransports]     = useState([]);
@@ -32,13 +34,16 @@ export default function App() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    const isYear = viewMode === 'year';
+    const mParam = isYear ? '' : `&month=${month}`;
     const { month: pm, year: py } = prevMonthYear(month, year);
+    const prevParam = isYear ? `year=${year - 1}` : `month=${pm}&year=${py}`;
     try {
       const [sRes, tRes, pRes, asRes, atRes] = await Promise.all([
-        fetch(`/api/stats?month=${month}&year=${year}&type=city`),
+        fetch(`/api/stats?${mParam ? mParam.slice(1) + '&' : ''}year=${year}&type=city`),
         fetch(`/api/transports?month=${month}&year=${year}&type=city`),
-        fetch(`/api/stats?month=${pm}&year=${py}&type=city`),
-        fetch(`/api/stats?month=${month}&year=${year}&type=agency`),
+        fetch(`/api/stats?${prevParam}&type=city`),
+        fetch(`/api/stats?${mParam ? mParam.slice(1) + '&' : ''}year=${year}&type=agency`),
         fetch(`/api/transports?month=${month}&year=${year}&type=agency`),
       ]);
       setStats(await sRes.json());
@@ -49,7 +54,7 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [month, year]);
+  }, [month, year, viewMode]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -80,13 +85,10 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          city: row.city,
-          county: null,
+          city: row.city, county: null,
           transport_count: row.count,
-          month: row.month,
-          year: row.year,
-          type: row.type,
-          knownCities: [],
+          month: row.month, year: row.year,
+          type: row.type, knownCities: [],
         }),
       })
     ));
@@ -118,18 +120,23 @@ export default function App() {
           </div>
         </div>
         <div className="month-selector">
-          <select value={month} onChange={e => setMonth(+e.target.value)}>
-            {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-          </select>
+          {viewMode === 'month' && (
+            <select value={month} onChange={e => setMonth(+e.target.value)}>
+              {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+            </select>
+          )}
           <input type="number" value={year} min={2020} max={2099}
             onChange={e => setYear(+e.target.value)} />
+          <button
+            className={`view-toggle${viewMode === 'year' ? ' active' : ''}`}
+            onClick={() => setViewMode(v => v === 'month' ? 'year' : 'month')}
+            title="Toggle monthly / yearly view"
+          >
+            {viewMode === 'month' ? 'Monthly' : 'Full Year'}
+          </button>
           {loading && <span className="loading-dot" />}
-          <button className="import-header-btn" onClick={() => setShowQuickEntry(true)}>
-            ✏ Quick Entry
-          </button>
-          <button className="import-header-btn" onClick={() => setShowImport(true)}>
-            ⬆ Import
-          </button>
+          <button className="import-header-btn" onClick={() => setShowQuickEntry(true)}>✏ Quick Entry</button>
+          <button className="import-header-btn" onClick={() => setShowImport(true)}>⬆ Import</button>
         </div>
       </header>
 
@@ -144,6 +151,7 @@ export default function App() {
           onClearCity={() => setSelectedCity(null)}
           month={month}
           year={year}
+          viewMode={viewMode}
           onAdd={handleAdd}
           onDelete={handleDelete}
         />
@@ -153,6 +161,7 @@ export default function App() {
             prevStats={prevStats}
             month={month}
             year={year}
+            viewMode={viewMode}
             selectedCity={selectedCity}
             onCityClick={handleCityClick}
             customCities={customCities}
@@ -167,7 +176,6 @@ export default function App() {
           onSuccess={result => { handleImportSuccess(result); }}
         />
       )}
-
       {showQuickEntry && (
         <QuickEntryModal
           month={month}
