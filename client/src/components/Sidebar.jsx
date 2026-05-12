@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import TransportForm from './TransportForm.jsx';
 import GraphsTab from './GraphsTab.jsx';
 import { getColor } from './MapView.jsx';
-import { MONTHS } from '../cityData.js';
+import { MONTHS, DFW_CITIES } from '../cityData.js';
 
 export default function Sidebar({
   stats, transports, agencyStats, agencyTransports,
   selectedCity, cityHistory, onClearCity,
   month, year, viewMode = 'month', onAdd, onDelete,
+  customCities = [], onPinsChange,
 }) {
   const [tab, setTab] = useState('add');
   const [agencyName, setAgencyName] = useState('');
@@ -156,11 +157,19 @@ export default function Sidebar({
           <GraphsTab year={year} month={month} />
         )}
 
-        {tab === 'city' && (
-          selectedCity
-            ? <CityDetail city={selectedCity} history={cityHistory} month={month} year={year} onBack={handleBack} />
-            : <div className="empty-state">Click any dot on the map to see its history.</div>
-        )}
+        {tab === 'city' && (() => {
+          if (!selectedCity) return <div className="empty-state">Click any dot on the map to see its history.</div>;
+          const builtIn  = DFW_CITIES.find(c => c.city.toLowerCase() === selectedCity.toLowerCase());
+          const custom   = customCities.find(c => c.city.toLowerCase() === selectedCity.toLowerCase());
+          const coords   = builtIn ?? custom ?? null;
+          const isCustom = !!custom && !builtIn;
+          return (
+            <CityDetail
+              city={selectedCity} history={cityHistory} month={month} year={year} onBack={handleBack}
+              coords={coords} isCustom={isCustom} onPinsChange={onPinsChange}
+            />
+          );
+        })()}
       </div>
     </aside>
   );
@@ -184,7 +193,10 @@ function StatCard({ label, value, sub, delta, highlight }) {
   );
 }
 
-function CityDetail({ city, history, month, year, onBack }) {
+const NOMINATIM = name =>
+  `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name + ', Texas, USA')}&format=json&limit=1`;
+
+function CityDetail({ city, history, month, year, onBack, coords, isCustom, onPinsChange }) {
   const maxTotal   = Math.max(...history.map(h => h.total), 1);
   const grandTotal = history.reduce((s, h) => s + h.total, 0);
 
@@ -197,6 +209,73 @@ function CityDetail({ city, history, month, year, onBack }) {
 
   const prevMonthName = month === 1 ? `Dec ${year - 1}` : `${MONTHS[month - 2].slice(0, 3)} ${year}`;
   const lastYearLabel = `${MONTHS[month - 1].slice(0, 3)} ${year - 1}`;
+
+  // Pin management state
+  const [pinMode, setPinMode]         = useState(null); // null | 'connect' | 'edit'
+  const [connectName, setConnectName] = useState('');
+  const [editLat, setEditLat]         = useState('');
+  const [editLon, setEditLon]         = useState('');
+  const [pinBusy, setPinBusy]         = useState(false);
+  const [pinMsg, setPinMsg]           = useState('');
+
+  const startEdit = () => {
+    setEditLat((+coords.lat).toFixed(5));
+    setEditLon((+coords.lon).toFixed(5));
+    setPinMode('edit');
+    setPinMsg('');
+  };
+
+  const handleGeocode = async () => {
+    setPinBusy(true); setPinMsg('');
+    try {
+      const data = await fetch(NOMINATIM(city), { headers: { 'Accept-Language': 'en' } }).then(r => r.json());
+      if (!data.length) { setPinMsg('Location not found.'); return; }
+      setEditLat(parseFloat(data[0].lat).toFixed(5));
+      setEditLon(parseFloat(data[0].lon).toFixed(5));
+    } finally { setPinBusy(false); }
+  };
+
+  const saveCoords = async () => {
+    if (!editLat || !editLon) return;
+    setPinBusy(true); setPinMsg('');
+    try {
+      await fetch('/api/cities/custom', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ city, lat: +editLat, lon: +editLon }),
+      });
+      setPinMode(null);
+      onPinsChange?.();
+      setPinMsg('Location saved.');
+    } finally { setPinBusy(false); }
+  };
+
+  const deletePin = async () => {
+    if (!confirm(`Remove the "${city}" pin from the map?`)) return;
+    setPinBusy(true);
+    try {
+      await fetch('/api/cities/custom', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ city }),
+      });
+      onPinsChange?.();
+      onBack();
+    } finally { setPinBusy(false); }
+  };
+
+  const connectHere = async () => {
+    if (!connectName.trim() || !coords) return;
+    setPinBusy(true); setPinMsg('');
+    try {
+      await fetch('/api/cities/custom', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ city: connectName.trim(), lat: coords.lat, lon: coords.lon }),
+      });
+      setConnectName('');
+      setPinMode(null);
+      onPinsChange?.();
+      setPinMsg(`"${connectName.trim()}" will now appear at this location.`);
+    } finally { setPinBusy(false); }
+  };
 
   return (
     <div className="city-detail">
@@ -254,6 +333,81 @@ function CityDetail({ city, history, month, year, onBack }) {
           </table>
         </>
       )}
+
+      {/* ── Pin management ── */}
+      <div className="city-pin-section">
+        <div className="city-pin-header">
+          <span className="city-pin-title">📍 Map pin</span>
+          {coords && (
+            <span className="city-pin-coords">
+              {(+coords.lat).toFixed(4)}, {(+coords.lon).toFixed(4)}
+            </span>
+          )}
+        </div>
+
+        {pinMode === 'edit' && (
+          <div className="city-pin-edit">
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input type="number" step="0.0001" value={editLat} onChange={e => setEditLat(e.target.value)}
+                placeholder="Lat" style={{ flex: 1, padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12 }} />
+              <input type="number" step="0.0001" value={editLon} onChange={e => setEditLon(e.target.value)}
+                placeholder="Lon" style={{ flex: 1, padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12 }} />
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+              <button className="pin-btn pin-btn-secondary" onClick={handleGeocode} disabled={pinBusy}>
+                {pinBusy ? '…' : '🔍 Re-locate'}
+              </button>
+              <button className="pin-btn pin-btn-primary" onClick={saveCoords} disabled={pinBusy}>Save</button>
+              <button className="pin-btn pin-btn-secondary" onClick={() => setPinMode(null)}>Cancel</button>
+              <button className="pin-btn pin-btn-danger" onClick={deletePin} disabled={pinBusy}>Delete pin</button>
+            </div>
+          </div>
+        )}
+
+        {pinMode === 'connect' && (
+          <div className="city-pin-connect">
+            <p style={{ fontSize: 12, color: '#718096', marginBottom: 6 }}>
+              Any transport logged under this name will appear at <strong>{city}</strong>'s location on the map.
+            </p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                value={connectName}
+                onChange={e => setConnectName(e.target.value)}
+                placeholder="e.g. MedStar, MSTAR…"
+                onKeyDown={e => e.key === 'Enter' && connectHere()}
+                style={{ flex: 1, padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 13 }}
+                autoFocus
+              />
+              <button className="pin-btn pin-btn-primary" onClick={connectHere} disabled={pinBusy || !connectName.trim()}>
+                {pinBusy ? '…' : 'Add'}
+              </button>
+              <button className="pin-btn pin-btn-secondary" onClick={() => { setPinMode(null); setConnectName(''); }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {pinMode === null && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {coords && (
+              <button className="pin-btn pin-btn-connect" onClick={() => { setPinMode('connect'); setPinMsg(''); }}>
+                + Connect a name here
+              </button>
+            )}
+            {isCustom && (
+              <button className="pin-btn pin-btn-secondary" onClick={startEdit}>Edit location</button>
+            )}
+          </div>
+        )}
+
+        {pinMsg && (
+          <div style={{ fontSize: 12, color: '#276749', marginTop: 6, padding: '4px 8px',
+            background: '#f0fff4', borderRadius: 5, border: '1px solid #c6f6d5' }}>
+            {pinMsg}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

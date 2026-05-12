@@ -581,6 +581,33 @@ body {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
 }
 
+/* ── City pin management ── */
+.city-pin-section {
+  margin-top: 20px; padding: 12px 14px;
+  background: #f7fafc; border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+.city-pin-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
+}
+.city-pin-title { font-size: 12px; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: .4px; }
+.city-pin-coords { font-size: 11px; color: #a0aec0; font-family: monospace; }
+.city-pin-edit, .city-pin-connect { margin-bottom: 6px; }
+
+.pin-btn {
+  padding: 5px 12px; font-size: 12px; border-radius: 6px; cursor: pointer;
+  font-weight: 600; border: none; transition: all .15s;
+}
+.pin-btn-primary  { background: #1a365d; color: #fff; }
+.pin-btn-primary:hover { background: #2a4a7f; }
+.pin-btn-secondary { background: #fff; color: #4a5568; border: 1px solid #e2e8f0; }
+.pin-btn-secondary:hover { border-color: #1a365d; color: #1a365d; }
+.pin-btn-danger   { background: #fff3f3; color: #e53e3e; border: 1px solid #fed7d7; }
+.pin-btn-danger:hover { background: #fed7d7; }
+.pin-btn-connect  { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+.pin-btn-connect:hover { background: #bee3f8; }
+.pin-btn:disabled { opacity: .5; cursor: not-allowed; }
+
 .history-table th, .history-table td {
   font-size: 11px;
 }
