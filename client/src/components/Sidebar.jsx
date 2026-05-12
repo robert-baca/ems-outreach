@@ -78,8 +78,8 @@ export default function Sidebar({
                     <span className="stats-county">{s.county}</span>
                     <span className="stats-count"
                       style={{
-                        background: getColor(s.total) === '#e2e8f0' ? '#a0aec0' : getColor(s.total),
-                        color: s.total > 15 ? '#fff' : '#2d3748',
+                        background: getColor(s.total, viewMode === 'year') === '#e2e8f0' ? '#a0aec0' : getColor(s.total, viewMode === 'year'),
+                        color: (viewMode === 'year' ? s.total > 180 : s.total > 15) ? '#fff' : '#2d3748',
                       }}>
                       {s.total}
                     </span>

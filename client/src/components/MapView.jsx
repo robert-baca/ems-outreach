@@ -5,8 +5,15 @@ import { DFW_CITIES } from '../cityData.js';
 
 const BAYLOR_GRAPEVINE = [32.9339, -97.0783];
 
-export function getColor(count) {
+export function getColor(count, isYearly = false) {
   if (!count || count === 0) return '#e2e8f0';
+  if (isYearly) {
+    if (count <= 60)  return '#c6f6d5';
+    if (count <= 180) return '#48bb78';
+    if (count <= 360) return '#f6e05e';
+    if (count <= 600) return '#ed8936';
+    return '#e53e3e';
+  }
   if (count <= 5)  return '#c6f6d5';
   if (count <= 15) return '#48bb78';
   if (count <= 30) return '#f6e05e';
@@ -14,12 +21,18 @@ export function getColor(count) {
   return '#e53e3e';
 }
 
-function dotSize(count) {
+function dotSize(count, isYearly = false) {
   if (!count) return 8;
-  return Math.round(Math.max(22, Math.min(48, 12 + Math.sqrt(count) * 3.8)));
+  const scale = isYearly ? count / 12 : count;
+  return Math.round(Math.max(22, Math.min(52, 12 + Math.sqrt(scale) * 3.8)));
 }
 
-function makeIcon(count, isSelected) {
+function fmtCount(count) {
+  if (count >= 1000) return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  return String(count);
+}
+
+function makeIcon(count, isSelected, isYearly = false) {
   if (!count || count === 0) {
     const d = isSelected ? 11 : 8;
     return L.divIcon({
@@ -28,16 +41,18 @@ function makeIcon(count, isSelected) {
     });
   }
 
-  const sz  = dotSize(count);
-  const bg  = getColor(count);
-  const fc  = count > 15 ? '#fff' : '#1a202c';
-  const fs  = sz < 28 ? 10 : sz < 36 ? 12 : 14;
+  const sz   = dotSize(count, isYearly);
+  const bg   = getColor(count, isYearly);
+  const dark = isYearly ? count > 180 : count > 15;
+  const fc   = dark ? '#fff' : '#1a202c';
+  const label = fmtCount(count);
+  const fs   = sz < 28 ? 10 : sz < 36 ? 11 : sz < 44 ? 12 : 13;
   const ring = isSelected
     ? 'box-shadow:0 0 0 3px #1a365d,0 2px 8px rgba(0,0,0,.35)'
     : 'box-shadow:0 1px 5px rgba(0,0,0,.28)';
 
   return L.divIcon({
-    html: `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${bg};border:2px solid rgba(0,0,0,.12);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:800;color:${fc};${ring};cursor:pointer">${count}</div>`,
+    html: `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${bg};border:2px solid rgba(0,0,0,.12);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:800;color:${fc};${ring};cursor:pointer;line-height:1">${label}</div>`,
     className: '',
     iconSize: [sz, sz],
     iconAnchor: [sz / 2, sz / 2],
@@ -84,9 +99,8 @@ export default function MapView({ stats, prevStats, selectedCity, onCityClick, c
           const prev  = prevMap[city.toLowerCase()] || 0;
           const label = trendLabel(count, prev);
           const isSelected = selectedCity?.toLowerCase() === city.toLowerCase();
-          // Normalize yearly totals to monthly scale for consistent dot sizing/coloring
-          const displayCount = viewMode === 'year' ? Math.round(count / 12) : count;
-          const icon = makeIcon(displayCount, isSelected);
+          const isYearly = viewMode === 'year';
+          const icon = makeIcon(count, isSelected, isYearly);
 
           return (
             <Marker
@@ -106,7 +120,7 @@ export default function MapView({ stats, prevStats, selectedCity, onCityClick, c
 
       </MapContainer>
 
-      <Legend />
+      <Legend viewMode={viewMode} />
     </div>
   );
 }
