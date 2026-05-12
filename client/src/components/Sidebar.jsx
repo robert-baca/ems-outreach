@@ -215,19 +215,26 @@ function CityDetail({ city, history, month, year, onBack }) {
         <>
           <p className="city-detail-month">Month-to-month volume</p>
           <div className="history-chart">
-            {history.map(({ year: hy, month: hm, total }) => (
-              <div key={`${hy}-${hm}`} className={`history-col${hy === year && hm === month ? ' history-col-active' : ''}`}>
-                <span className="history-val">{total}</span>
-                <div className="history-bar-wrap">
-                  <div className="history-bar" style={{
-                    height: `${Math.max(4, Math.round((total / maxTotal) * 100))}%`,
-                    background: getColor(total) === '#e2e8f0' ? '#a0aec0' : getColor(total),
-                  }} />
+            {history.map(({ year: hy, month: hm, total }) => {
+              const BAR_MAX = 130;
+              const barH = Math.max(4, Math.round((total / maxTotal) * BAR_MAX));
+              const isActive = hy === year && hm === month;
+              return (
+                <div key={`${hy}-${hm}`} className={`history-col${isActive ? ' history-col-active' : ''}`}>
+                  <span className="history-val">{total}</span>
+                  <div className="history-bar-area">
+                    <div className="history-bar" style={{
+                      height: barH,
+                      background: getColor(total) === '#e2e8f0' ? '#a0aec0' : getColor(total),
+                      outline: isActive ? '2px solid #1a365d' : 'none',
+                      outlineOffset: 1,
+                    }} />
+                  </div>
+                  <span className="history-month">{MONTHS[hm - 1].slice(0, 3)}</span>
+                  <span className="history-year">{hy}</span>
                 </div>
-                <span className="history-month">{MONTHS[hm - 1].slice(0, 3)}</span>
-                <span className="history-year">{hy}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <table className="history-table">
             <thead><tr><th>Month</th><th>Year</th><th>Transports</th></tr></thead>

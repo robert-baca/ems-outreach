@@ -286,8 +286,6 @@ body {
 .stat-card-sub   { font-size: 10px; color: #a0aec0; }
 .stat-card-delta { font-size: 11px; font-weight: 700; margin-top: 2px; }
 
-/* Active bar in chart */
-.history-col-active .history-bar { outline: 2px solid #1a365d; outline-offset: 1px; }
 
 .btn-back {
   background: none; border: none; color: #1a365d;
@@ -304,9 +302,7 @@ body {
 .history-chart {
   display: flex;
   align-items: flex-end;
-  gap: 5px;
-  height: 150px;
-  padding-bottom: 0;
+  gap: 4px;
   overflow-x: auto;
   padding-bottom: 2px;
 }
@@ -315,7 +311,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-width: 34px;
+  min-width: 36px;
   flex-shrink: 0;
 }
 .history-val {
@@ -323,18 +319,19 @@ body {
   font-weight: 700;
   color: #2d3748;
   line-height: 1;
+  min-height: 13px;
 }
-.history-bar-wrap {
-  flex: 1;
-  width: 100%;
+.history-bar-area {
+  height: 130px;
   display: flex;
   align-items: flex-end;
+  width: 100%;
 }
 .history-bar {
   width: 100%;
   border-radius: 3px 3px 0 0;
   min-height: 4px;
-  transition: height .3s;
+  transition: height .25s ease;
 }
 .history-month { font-size: 10px; color: #4a5568; font-weight: 600; }
 .history-year  { font-size: 9px;  color: #a0aec0; }
