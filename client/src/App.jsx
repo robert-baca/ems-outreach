@@ -3,6 +3,7 @@ import MapView from './components/MapView.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import ImportModal from './components/ImportModal.jsx';
 import QuickEntryModal from './components/QuickEntryModal.jsx';
+import ManagePinsModal from './components/ManagePinsModal.jsx';
 import { MONTHS } from './cityData.js';
 
 const now = new Date();
@@ -25,8 +26,9 @@ export default function App() {
   const [selectedCity, setSelectedCity] = useState(null);
   const [cityHistory, setCityHistory]   = useState([]);
   const [customCities, setCustomCities] = useState([]);
-  const [showImport, setShowImport]     = useState(false);
+  const [showImport, setShowImport]       = useState(false);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
+  const [showManagePins, setShowManagePins] = useState(false);
 
   useEffect(() => {
     fetch('/api/cities/custom').then(r => r.json()).then(setCustomCities).catch(() => {});
@@ -140,6 +142,7 @@ export default function App() {
           {loading && <span className="loading-dot" />}
           <button className="import-header-btn" onClick={() => setShowQuickEntry(true)}>✏ Quick Entry</button>
           <button className="import-header-btn" onClick={() => setShowImport(true)}>⬆ Import</button>
+          <button className="import-header-btn" onClick={() => setShowManagePins(true)}>📍 Pins</button>
         </div>
       </header>
 
@@ -177,6 +180,13 @@ export default function App() {
           customCities={customCities}
           onClose={() => setShowImport(false)}
           onSuccess={result => { handleImportSuccess(result); }}
+        />
+      )}
+      {showManagePins && (
+        <ManagePinsModal
+          customCities={customCities}
+          onClose={() => setShowManagePins(false)}
+          onChange={setCustomCities}
         />
       )}
       {showQuickEntry && (

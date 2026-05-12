@@ -1,6 +1,25 @@
-import { getCustomCities } from '../_db.js';
+import { getCustomCities, upsertCustomCity, deleteCustomCity } from '../_db.js';
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') return res.status(405).end();
-  res.json(await getCustomCities());
+  if (req.method === 'GET') {
+    return res.json(await getCustomCities());
+  }
+
+  if (req.method === 'POST' || req.method === 'PUT') {
+    const { city, county, lat, lon } = req.body;
+    if (!city || lat == null || lon == null) {
+      return res.status(400).json({ error: 'city, lat, and lon are required' });
+    }
+    await upsertCustomCity({ city: city.trim(), county: county?.trim() || '', lat: +lat, lon: +lon });
+    return res.json({ ok: true });
+  }
+
+  if (req.method === 'DELETE') {
+    const { city } = req.body;
+    if (!city) return res.status(400).json({ error: 'city required' });
+    await deleteCustomCity(city);
+    return res.json({ ok: true });
+  }
+
+  res.status(405).end();
 }

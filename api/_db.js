@@ -112,6 +112,12 @@ export async function upsertCustomCity({ city, county, lat, lon }) {
   await sql`
     INSERT INTO custom_cities (city, county, lat, lon)
     VALUES (${city}, ${county ?? ''}, ${lat}, ${lon})
-    ON CONFLICT (city) DO UPDATE SET lat = EXCLUDED.lat, lon = EXCLUDED.lon
+    ON CONFLICT (city) DO UPDATE SET lat = EXCLUDED.lat, lon = EXCLUDED.lon, county = EXCLUDED.county
   `;
+}
+
+export async function deleteCustomCity(city) {
+  const sql = db();
+  await initDB();
+  await sql`DELETE FROM custom_cities WHERE LOWER(city) = LOWER(${city})`;
 }
