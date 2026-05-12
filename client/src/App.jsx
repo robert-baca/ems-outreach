@@ -125,8 +125,11 @@ export default function App() {
               {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
           )}
-          <input type="number" value={year} min={2020} max={2099}
-            onChange={e => setYear(+e.target.value)} />
+          <select value={year} onChange={e => setYear(+e.target.value)}>
+            {Array.from({ length: 10 }, (_, i) => 2020 + i).map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
           <button
             className={`view-toggle${viewMode === 'year' ? ' active' : ''}`}
             onClick={() => setViewMode(v => v === 'month' ? 'year' : 'month')}

@@ -538,3 +538,52 @@ body {
   cursor: pointer; transition: all .15s;
 }
 .btn-add-row:hover { border-color: #1a365d; color: #1a365d; }
+
+/* ── Graphs Tab ── */
+.graphs-tab { display: flex; flex-direction: column; gap: 0; }
+
+.graphs-type-toggle {
+  display: flex; gap: 6px; margin-bottom: 12px;
+}
+.graphs-type-btn {
+  flex: 1; padding: 5px 10px; border-radius: 6px;
+  border: 1px solid #e2e8f0; background: #fff; color: #4a5568;
+  cursor: pointer; font-size: 12px; font-weight: 600;
+  transition: all .15s;
+}
+.graphs-type-btn.active { background: #1a365d; color: #fff; border-color: #1a365d; }
+.graphs-type-btn.agency.active { background: #667eea; border-color: #667eea; }
+
+.graphs-summary {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px; margin-bottom: 12px;
+}
+.graphs-summary-item {
+  background: #f7fafc; border-radius: 8px; padding: 8px 6px;
+  text-align: center; border: 1px solid #e2e8f0;
+}
+.graphs-summary-val {
+  display: block; font-size: 18px; font-weight: 800; color: #1a365d; line-height: 1.1;
+}
+.graphs-summary-lbl {
+  display: block; font-size: 10px; color: #718096; margin-top: 2px;
+  text-transform: uppercase; letter-spacing: .3px;
+}
+
+.graphs-legend {
+  display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px;
+}
+.graphs-legend-item {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 10px; color: #4a5568;
+}
+.graphs-legend-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+
+.history-table th, .history-table td {
+  font-size: 11px;
+}
+.history-table th { padding: 5px 4px; }
+.history-table td { padding: 4px; text-align: right; }
+.history-table td:first-child { text-align: left; white-space: nowrap; }

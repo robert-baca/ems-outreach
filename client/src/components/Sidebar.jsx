@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import TransportForm from './TransportForm.jsx';
+import GraphsTab from './GraphsTab.jsx';
 import { getColor } from './MapView.jsx';
 import { MONTHS } from '../cityData.js';
 
@@ -53,6 +54,7 @@ export default function Sidebar({
         <button className={tab === 'stats'    ? 'active' : ''} onClick={() => setTab('stats')}>Cities ({stats.length})</button>
         <button className={tab === 'agencies' ? 'active' : ''} onClick={() => setTab('agencies')}>Agencies ({agencyStats.length})</button>
         <button className={tab === 'list'     ? 'active' : ''} onClick={() => setTab('list')}>Log</button>
+        <button className={tab === 'graphs'   ? 'active' : ''} onClick={() => setTab('graphs')}>Graphs</button>
         {selectedCity && (
           <button className={tab === 'city' ? 'active' : ''} onClick={() => setTab('city')}
             style={{ color: '#1a365d', fontWeight: 800 }}>📍</button>
@@ -148,6 +150,10 @@ export default function Sidebar({
               </div>
             )}
           </>
+        )}
+
+        {tab === 'graphs' && (
+          <GraphsTab year={year} month={month} />
         )}
 
         {tab === 'city' && (

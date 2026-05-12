@@ -94,6 +94,18 @@ export async function getCustomCities() {
   return sql`SELECT * FROM custom_cities ORDER BY city`;
 }
 
+export async function getMonthlyBreakdown(year, type = 'city') {
+  const sql = db();
+  await initDB();
+  return sql`
+    SELECT city, month, SUM(transport_count)::int AS total
+    FROM transports
+    WHERE year = ${+year} AND COALESCE(type, 'city') = ${type}
+    GROUP BY city, month
+    ORDER BY city, month
+  `;
+}
+
 export async function upsertCustomCity({ city, county, lat, lon }) {
   const sql = db();
   await initDB();
