@@ -23,6 +23,37 @@ export async function initDB() {
     lat REAL NOT NULL,
     lon REAL NOT NULL
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS city_aliases (
+    alias TEXT PRIMARY KEY,
+    canonical TEXT NOT NULL
+  )`;
+}
+
+export async function getAliases() {
+  const sql = db();
+  await initDB();
+  return sql`SELECT alias, canonical FROM city_aliases ORDER BY alias`;
+}
+
+export async function setAlias(alias, canonical, changeType = false) {
+  const sql = db();
+  await initDB();
+  await sql`
+    INSERT INTO city_aliases (alias, canonical)
+    VALUES (${alias}, ${canonical})
+    ON CONFLICT (alias) DO UPDATE SET canonical = EXCLUDED.canonical
+  `;
+  if (changeType) {
+    await sql`UPDATE transports SET city = ${canonical}, type = 'city' WHERE LOWER(city) = LOWER(${alias})`;
+  } else {
+    await sql`UPDATE transports SET city = ${canonical} WHERE LOWER(city) = LOWER(${alias})`;
+  }
+}
+
+export async function deleteAlias(alias) {
+  const sql = db();
+  await initDB();
+  await sql`DELETE FROM city_aliases WHERE LOWER(alias) = LOWER(${alias})`;
 }
 
 export async function getTransports({ month, year, type = 'city' }) {
@@ -73,10 +104,12 @@ export async function getCityHistory(city) {
 export async function addTransport({ city, county, transport_count, month, year, type = 'city' }) {
   const sql = db();
   await initDB();
+  const aliasRows = await sql`SELECT canonical FROM city_aliases WHERE LOWER(alias) = LOWER(${city}) LIMIT 1`;
+  const resolvedCity = aliasRows.length ? aliasRows[0].canonical : city;
   const id = randomUUID();
   const rows = await sql`
     INSERT INTO transports (id, city, county, transport_count, month, year, type)
-    VALUES (${id}, ${city}, ${county ?? null}, ${+transport_count || 1}, ${+month}, ${+year}, ${type})
+    VALUES (${id}, ${resolvedCity}, ${county ?? null}, ${+transport_count || 1}, ${+month}, ${+year}, ${type})
     RETURNING *
   `;
   return rows[0];

@@ -8,12 +8,49 @@ export default function Sidebar({
   stats, transports, agencyStats, agencyTransports,
   selectedCity, cityHistory, onClearCity,
   month, year, viewMode = 'month', onAdd, onDelete,
-  customCities = [], onPinsChange,
+  customCities = [], onPinsChange, onRefresh,
 }) {
   const [tab, setTab] = useState('add');
   const [agencyName, setAgencyName] = useState('');
   const [agencyCount, setAgencyCount] = useState(1);
   const [agencySubmitting, setAgencySubmitting] = useState(false);
+  const [linkingCity, setLinkingCity]   = useState(null);
+  const [linkTarget, setLinkTarget]     = useState('');
+  const [linkBusy, setLinkBusy]         = useState(false);
+  const [linkChangeType, setLinkChangeType] = useState(false);
+
+  const builtInSet = new Set(DFW_CITIES.map(c => c.city.toLowerCase()));
+  const customSet  = new Set(customCities.map(c => c.city.toLowerCase()));
+  const onMapSet   = new Set([...builtInSet, ...customSet]);
+
+  const allMapCities = [
+    ...DFW_CITIES.map(c => c.city),
+    ...customCities.map(c => c.city).filter(c => !builtInSet.has(c.toLowerCase())),
+  ].sort();
+
+  const startLink = (cityName, changeType = false) => {
+    setLinkingCity(cityName);
+    setLinkTarget('');
+    setLinkChangeType(changeType);
+  };
+
+  const cancelLink = () => { setLinkingCity(null); setLinkTarget(''); };
+
+  const handleLink = async () => {
+    if (!linkingCity || !linkTarget.trim()) return;
+    setLinkBusy(true);
+    try {
+      await fetch('/api/aliases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alias: linkingCity, canonical: linkTarget.trim(), changeType: linkChangeType }),
+      });
+      cancelLink();
+      onRefresh?.();
+    } finally {
+      setLinkBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (selectedCity) setTab('city');
@@ -70,24 +107,38 @@ export default function Sidebar({
             <p className="stats-header">
               {viewMode === 'year' ? `${year} Full Year` : `${MONTHS[month - 1]} ${year}`} — {totalTransports} city transport{totalTransports !== 1 ? 's' : ''}
             </p>
+            {linkingCity && (
+              <LinkBar cityName={linkingCity} target={linkTarget} onTargetChange={setLinkTarget}
+                allCities={allMapCities} busy={linkBusy} onSave={handleLink} onCancel={cancelLink}
+                note={linkChangeType ? 'This will also move these records to city tracking and show them on the map.' : null} />
+            )}
             {stats.length === 0 ? (
               <div className="empty-state">No city transports logged this month.</div>
             ) : (
               <ul className="stats-list">
-                {stats.map((s, i) => (
-                  <li key={s.city} className="stats-list-item">
-                    <span className="stats-rank">#{i + 1}</span>
-                    <span className="stats-city">{s.city}</span>
-                    <span className="stats-county">{s.county}</span>
-                    <span className="stats-count"
-                      style={{
-                        background: getColor(s.total, viewMode === 'year') === '#e2e8f0' ? '#a0aec0' : getColor(s.total, viewMode === 'year'),
-                        color: (viewMode === 'year' ? s.total > 180 : s.total > 15) ? '#fff' : '#2d3748',
-                      }}>
-                      {s.total}
-                    </span>
-                  </li>
-                ))}
+                {stats.map((s, i) => {
+                  const isOnMap = onMapSet.has(s.city.toLowerCase());
+                  return (
+                    <li key={s.city} className="stats-list-item" style={{ flexWrap: 'wrap', gap: 4 }}>
+                      <span className="stats-rank">#{i + 1}</span>
+                      <span className="stats-city">{s.city}</span>
+                      <span className="stats-county">{s.county}</span>
+                      <span className="stats-count"
+                        style={{
+                          background: getColor(s.total, viewMode === 'year') === '#e2e8f0' ? '#a0aec0' : getColor(s.total, viewMode === 'year'),
+                          color: (viewMode === 'year' ? s.total > 180 : s.total > 15) ? '#fff' : '#2d3748',
+                        }}>
+                        {s.total}
+                      </span>
+                      {!isOnMap && (
+                        <button className="link-badge" onClick={() => startLink(s.city, false)}
+                          title="Not on map — click to link">
+                          🔗 not on map
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </>
@@ -118,18 +169,26 @@ export default function Sidebar({
               </button>
             </form>
 
+            {linkingCity && (
+              <LinkBar cityName={linkingCity} target={linkTarget} onTargetChange={setLinkTarget}
+                allCities={allMapCities} busy={linkBusy} onSave={handleLink} onCancel={cancelLink}
+                note="This will move these records to city tracking and show them on the map." />
+            )}
             {agencyStats.length === 0 ? (
               <div className="empty-state" style={{ marginTop: 20 }}>No agency transports this month.</div>
             ) : (
               <ul className="stats-list" style={{ marginTop: 12 }}>
                 {agencyStats.map((s, i) => (
-                  <li key={s.city} className="stats-list-item">
+                  <li key={s.city} className="stats-list-item" style={{ flexWrap: 'wrap', gap: 4 }}>
                     <span className="stats-rank">#{i + 1}</span>
                     <span className="stats-city">{s.city}</span>
-                    <span className="stats-count"
-                      style={{ background: '#667eea', color: '#fff' }}>
+                    <span className="stats-count" style={{ background: '#667eea', color: '#fff' }}>
                       {s.total}
                     </span>
+                    <button className="link-badge link-badge-agency" onClick={() => startLink(s.city, true)}
+                      title="Link to a city to show on map">
+                      🗺 link to map
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -189,6 +248,35 @@ function StatCard({ label, value, sub, delta, highlight }) {
       <div className="stat-card-value">{value ?? '—'}</div>
       {sub   && <div className="stat-card-sub">{sub}</div>}
       {delta != null && <div className="stat-card-delta" style={{ color }}>{sign} {Math.abs(delta)}%</div>}
+    </div>
+  );
+}
+
+function LinkBar({ cityName, target, onTargetChange, allCities, busy, onSave, onCancel, note }) {
+  return (
+    <div className="link-bar">
+      <div className="link-bar-title">
+        Link <strong>"{cityName}"</strong> to:
+      </div>
+      <div className="link-bar-row">
+        <input
+          list="link-datalist"
+          value={target}
+          onChange={e => onTargetChange(e.target.value)}
+          placeholder="Type or pick a city…"
+          onKeyDown={e => e.key === 'Enter' && onSave()}
+          autoFocus
+          className="link-bar-input"
+        />
+        <datalist id="link-datalist">
+          {allCities.map(c => <option key={c} value={c} />)}
+        </datalist>
+        <button className="pin-btn pin-btn-primary" onClick={onSave} disabled={busy || !target.trim()}>
+          {busy ? '…' : 'Link'}
+        </button>
+        <button className="pin-btn pin-btn-secondary" onClick={onCancel}>Cancel</button>
+      </div>
+      {note && <div className="link-bar-note">{note}</div>}
     </div>
   );
 }

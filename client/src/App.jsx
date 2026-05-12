@@ -159,6 +159,7 @@ export default function App() {
           onDelete={handleDelete}
           customCities={customCities}
           onPinsChange={() => fetch('/api/cities/custom').then(r => r.json()).then(setCustomCities)}
+          onRefresh={fetchData}
         />
         <main className="map-container">
           <MapView

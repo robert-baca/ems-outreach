@@ -581,6 +581,33 @@ body {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
 }
 
+/* ── City alias / link ── */
+.link-badge {
+  font-size: 10px; padding: 2px 7px; border-radius: 10px;
+  border: 1px solid #fbd38d; background: #fefcbf; color: #744210;
+  cursor: pointer; font-weight: 600; white-space: nowrap;
+  transition: all .15s;
+}
+.link-badge:hover { background: #f6e05e; border-color: #d69e2e; }
+.link-badge-agency { border-color: #b794f4; background: #e9d8fd; color: #553c9a; }
+.link-badge-agency:hover { background: #d6bcfa; }
+
+.link-bar {
+  margin: 6px 0 10px; padding: 10px 12px; background: #fffbeb;
+  border: 1px solid #fbd38d; border-radius: 8px;
+}
+.link-bar-title { font-size: 13px; color: #744210; margin-bottom: 7px; }
+.link-bar-row   { display: flex; gap: 6px; align-items: center; }
+.link-bar-input {
+  flex: 1; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 6px;
+  font-size: 13px; outline: none;
+}
+.link-bar-input:focus { border-color: #1a365d; }
+.link-bar-note {
+  font-size: 11px; color: #744210; margin-top: 6px;
+  padding: 4px 6px; background: #fef3c7; border-radius: 4px;
+}
+
 /* ── City pin management ── */
 .city-pin-section {
   margin-top: 20px; padding: 12px 14px;
