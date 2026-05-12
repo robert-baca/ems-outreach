@@ -63,6 +63,8 @@ export const DFW_CITIES = [
   { city: 'Argyle',              county: 'Denton',   lat: 33.1218, lon: -97.1833 },
   { city: 'Roanoke',             county: 'Denton',   lat: 33.0079, lon: -97.2261 },
   { city: 'Trophy Club',         county: 'Denton',   lat: 32.9918, lon: -97.1790 },
+  { city: 'Westlake',            county: 'Tarrant',  lat: 32.9979, lon: -97.1977 },
+  { city: 'Justin',              county: 'Denton',   lat: 33.0848, lon: -97.2961 },
   { city: 'Aubrey',              county: 'Denton',   lat: 33.2954, lon: -96.9803 },
   { city: 'Pilot Point',         county: 'Denton',   lat: 33.3962, lon: -96.9589 },
   { city: 'Lake Dallas',         county: 'Denton',   lat: 33.1087, lon: -97.0197 },
