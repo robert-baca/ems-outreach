@@ -4,12 +4,61 @@ import { DFW_CITIES, MONTHS } from '../cityData.js';
 
 const KNOWN = new Set(DFW_CITIES.map(c => c.city.toLowerCase()));
 
-const MONTH_NAMES = {
-  january:1, jan:1, february:2, feb:2, march:3, mar:3,
-  april:4, apr:4, may:5, june:6, jun:6, july:7, jul:7,
-  august:8, aug:8, september:9, sep:9, sept:9,
-  october:10, oct:10, november:11, nov:11, december:12, dec:12,
+const MONTH_HEADER = {
+  jan:1, january:1, feb:2, february:2, mar:3, march:3,
+  apr:4, april:4, may:5, jun:6, june:6, jul:7, july:7,
+  aug:8, august:8, sep:9, sept:9, september:9,
+  oct:10, october:10, nov:11, november:11, dec:12, december:12,
 };
+
+// ── Wide format (your current sheet: agencies in rows, Jan-Dec in columns) ──
+
+function yearFromSheetName(name) {
+  const m = String(name).match(/\d{4}/);
+  return m ? +m[0] : new Date().getFullYear();
+}
+
+function parseWideFormat(ws, sheetName) {
+  const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  const year = yearFromSheetName(sheetName);
+
+  // Find the header row — first row that has 6+ month names
+  let headerIdx = -1;
+  let monthCols = {}; // colIndex → monthNumber
+
+  for (let i = 0; i < Math.min(6, data.length); i++) {
+    const cols = {};
+    data[i].forEach((cell, j) => {
+      const key = String(cell).toLowerCase().trim();
+      if (MONTH_HEADER[key]) cols[j] = MONTH_HEADER[key];
+    });
+    if (Object.keys(cols).length >= 6) { headerIdx = i; monthCols = cols; break; }
+  }
+
+  if (headerIdx === -1) return null; // not wide format
+
+  const rows = [];
+  for (let i = headerIdx + 1; i < data.length; i++) {
+    const row = data[i];
+    const name = String(row[0] ?? '').trim();
+    if (!name) continue;
+
+    // Determine type: known DFW city → 'city', otherwise → 'agency'
+    const type = KNOWN.has(name.toLowerCase()) ? 'city' : 'agency';
+
+    for (const [colIdx, month] of Object.entries(monthCols)) {
+      const count = parseInt(row[colIdx], 10);
+      if (!isNaN(count) && count > 0) {
+        rows.push({ city: name, count, month, year, type, errors: [] });
+      }
+    }
+  }
+  return rows;
+}
+
+// ── Tall format (City / Count / Month / Year columns) ──
+
+const MONTH_NAMES = { ...MONTH_HEADER };
 
 function normalizeKey(k) { return String(k).toLowerCase().replace(/[\s_]+/g, ''); }
 
@@ -20,40 +69,56 @@ function parseMonth(val) {
   return MONTH_NAMES[String(val).toLowerCase().trim()] ?? null;
 }
 
-function normalizeRow(raw) {
-  const m = {};
-  for (const [k, v] of Object.entries(raw)) m[normalizeKey(k)] = v;
-
-  const city  = String(m.city ?? m.cityname ?? m.location ?? '').trim();
-  const count = parseInt(m.count ?? m.transports ?? m.volume ?? m.transportcount ?? m.number ?? 1, 10);
-  const month = parseMonth(m.month ?? m.mo ?? m.monthnum ?? '');
-  const year  = parseInt(m.year ?? m.yr ?? '', 10);
-
-  const errors = [];
-  if (!city)       errors.push('missing city');
-  if (!month)      errors.push('invalid month');
-  if (isNaN(year)) errors.push('invalid year');
-
-  return { city, count: isNaN(count) ? 1 : count, month, year, errors };
+function parseTallFormat(ws) {
+  const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+  return json.map(raw => {
+    const m = {};
+    for (const [k, v] of Object.entries(raw)) m[normalizeKey(k)] = v;
+    const city  = String(m.city ?? m.cityname ?? m.emsagency ?? m.agency ?? m.location ?? '').trim();
+    const count = parseInt(m.count ?? m.transports ?? m.volume ?? m.transportcount ?? 1, 10);
+    const month = parseMonth(m.month ?? m.mo ?? '');
+    const year  = parseInt(m.year ?? m.yr ?? '', 10);
+    const type  = String(m.type ?? 'city').toLowerCase() === 'agency' ? 'agency' : 'city';
+    const errors = [];
+    if (!city)       errors.push('missing name');
+    if (!month)      errors.push('invalid month');
+    if (isNaN(year)) errors.push('invalid year');
+    return { city, count: isNaN(count) ? 1 : count, month, year, type, errors };
+  });
 }
+
+// ── Template download — matches your current sheet format ──
 
 function downloadTemplate() {
-  const ws = XLSX.utils.aoa_to_sheet([
-    ['City', 'Count', 'Month', 'Year'],
-    ['Grapevine', 5, 5, 2026],
-    ['Fort Worth', 12, 5, 2026],
-    ['Irving', 8, 5, 2026],
-  ]);
+  const year = new Date().getFullYear();
+  const header1 = ['EMS AGENCY', `FY${year}`, '', '', '', '', '', '', '', '', '', '', ''];
+  const header2 = ['', 'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const samples = [
+    ['Colleyville', 62,71,63,63,63,61,60,59,65,49,53,56],
+    ['Coppell',     49,44,50,37,58,61,49,39,62,47,46,50],
+    ['Euless',      49,63,62,51,75,68,50,64,79,75,53,68],
+    ['CAREFLITE',    1, 0, 2, 6, 1, 5, 5,10, 5, 5, 5, 3],
+    ['ACADIAN',      2, 5, 1, 3, 3, 4, 2, 3, 1, 7, 1, 4],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet([header1, header2, ...samples]);
+  // Merge A1:B1 for the "EMS AGENCY / FY YEAR" header look
+  ws['!merges'] = [{ s: { r: 0, c: 1 }, e: { r: 0, c: 12 } }];
+  ws['!cols'] = [{ wch: 22 }, ...Array(12).fill({ wch: 6 })];
+
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Transports');
-  XLSX.writeFile(wb, 'ems_import_template.xlsx');
+  XLSX.utils.book_append_sheet(wb, ws, `FY${year}`);
+  XLSX.writeFile(wb, `ems_template_FY${year}.xlsx`);
 }
 
+// ── Component ──
+
 export default function ImportModal({ customCities, onClose, onSuccess }) {
-  const [rows, setRows]         = useState([]);
+  const [rows, setRows]       = useState([]);
   const [dragging, setDragging] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [result, setResult]     = useState(null);
+  const [result, setResult]   = useState(null);
+  const [formatUsed, setFormatUsed] = useState('');
   const fileRef = useRef();
 
   const allKnown = new Set([
@@ -64,31 +129,39 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
   function parseFile(file) {
     const reader = new FileReader();
     reader.onload = e => {
-      const wb = XLSX.read(e.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
-      setRows(json.map(normalizeRow));
+      const wb   = XLSX.read(e.target.result, { type: 'array' });
+      const sheetName = wb.SheetNames[0];
+      const ws   = wb.Sheets[sheetName];
+
+      // Try wide format first (your current sheet style)
+      const wide = parseWideFormat(ws, sheetName);
+      if (wide) {
+        setRows(wide);
+        setFormatUsed('wide');
+      } else {
+        setRows(parseTallFormat(ws));
+        setFormatUsed('tall');
+      }
       setResult(null);
     };
     reader.readAsArrayBuffer(file);
   }
 
-  const validRows  = rows.filter(r => r.errors.length === 0);
-  const newCities  = [...new Set(
-    validRows.filter(r => !allKnown.has(r.city.toLowerCase())).map(r => r.city)
+  const validRows = rows.filter(r => r.errors.length === 0);
+  const cityRows  = validRows.filter(r => r.type === 'city');
+  const agencyRows = validRows.filter(r => r.type === 'agency');
+  const newCities = [...new Set(
+    cityRows.filter(r => !allKnown.has(r.city.toLowerCase())).map(r => r.city)
   )];
 
   async function handleImport() {
     setImporting(true);
     try {
       const records = validRows.map(r => ({
-        city: r.city,
-        county: null,
+        city: r.city, county: null,
         transport_count: r.count,
-        service_line: null,
-        ems_agency: null,
-        month: r.month,
-        year: r.year,
+        month: r.month, year: r.year,
+        type: r.type,
       }));
       const resp = await fetch('/api/import', {
         method: 'POST',
@@ -111,19 +184,16 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
         </div>
 
         <div className="modal-body">
-          {/* Template hint */}
           <div className="template-hint">
-            <strong>Expected columns:</strong>{' '}
-            <code>City, Count, Month, Year</code>
+            <strong>Supports your current format</strong> — agency names in rows, months (Jan–Dec) across the top, year in the tab name (e.g. FY2026).
             <br />
-            Month can be a number (1–12) or name (January, Jan, etc.)
+            Known DFW cities map as city pins · Everything else (CAREFLITE, ACADIAN, etc.) goes to the Agencies tab.
             <br />
             <button className="btn-template" onClick={downloadTemplate}>
               ⬇ Download template (.xlsx)
             </button>
           </div>
 
-          {/* Drop zone */}
           {rows.length === 0 && (
             <div
               className={`drop-zone${dragging ? ' drag-over' : ''}`}
@@ -144,15 +214,16 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
             </div>
           )}
 
-          {/* Preview */}
           {rows.length > 0 && !result && (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <p style={{ fontSize: 13, color: '#4a5568' }}>
-                  <strong>{validRows.length}</strong> valid rows
+                  <strong>{validRows.length}</strong> records
                   {rows.length - validRows.length > 0 && ` · ${rows.length - validRows.length} skipped`}
+                  {' · '}<span style={{ color: '#1a365d' }}>{cityRows.length} city</span>
+                  {' · '}<span style={{ color: '#667eea' }}>{agencyRows.length} agency</span>
                   {newCities.length > 0 && (
-                    <span style={{ color: '#2b6cb0' }}> · {newCities.length} new city{newCities.length !== 1 ? 'ies' : ''} will be geocoded</span>
+                    <span style={{ color: '#2b6cb0' }}> · {newCities.length} new map pin{newCities.length !== 1 ? 's' : ''}</span>
                   )}
                 </p>
                 <button className="btn-cancel" style={{ fontSize: 12, padding: '4px 10px' }}
@@ -161,24 +232,14 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
                 </button>
               </div>
 
-              {newCities.length > 0 && (
-                <div className="geocode-status">
-                  New departments to add: {newCities.map((c, i) => (
-                    <span key={c}>{i > 0 && ', '}<span>{c}</span></span>
-                  ))}
-                  <br />
-                  <small>Coordinates will be looked up automatically via OpenStreetMap.</small>
-                </div>
-              )}
-
               <div className="preview-wrap">
                 <table className="preview-table">
                   <thead>
-                    <tr><th>City</th><th>Count</th><th>Month</th><th>Year</th><th>Status</th></tr>
+                    <tr><th>Name</th><th>Count</th><th>Month</th><th>Year</th><th>Type</th></tr>
                   </thead>
                   <tbody>
                     {rows.map((r, i) => (
-                      <tr key={i} style={{ opacity: r.errors.length ? 0.5 : 1 }}>
+                      <tr key={i} style={{ opacity: r.errors.length ? 0.4 : 1 }}>
                         <td>{r.city || '—'}</td>
                         <td>{r.count}</td>
                         <td>{r.month ? MONTHS[r.month - 1] : '—'}</td>
@@ -186,9 +247,11 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
                         <td>
                           {r.errors.length > 0
                             ? <span className="badge-error">{r.errors[0]}</span>
-                            : allKnown.has(r.city.toLowerCase())
-                              ? <span className="badge-known">known</span>
-                              : <span className="badge-new">new dept</span>}
+                            : r.type === 'agency'
+                              ? <span className="badge-agency">agency</span>
+                              : allKnown.has(r.city.toLowerCase())
+                                ? <span className="badge-known">city</span>
+                                : <span className="badge-new">new pin</span>}
                         </td>
                       </tr>
                     ))}
@@ -198,22 +261,21 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
             </>
           )}
 
-          {/* Result */}
           {result && (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <div style={{ fontSize: 40 }}>✅</div>
               <p style={{ fontWeight: 700, fontSize: 16, marginTop: 10 }}>
-                {result.saved} transport{result.saved !== 1 ? 's' : ''} imported
+                {result.saved} record{result.saved !== 1 ? 's' : ''} imported
               </p>
               {result.geocoded > 0 && (
                 <p style={{ color: '#2b6cb0', fontSize: 13, marginTop: 6 }}>
-                  {result.geocoded} new department{result.geocoded !== 1 ? 's' : ''} added to map:{' '}
+                  {result.geocoded} new pin{result.geocoded !== 1 ? 's' : ''} added to map:{' '}
                   {result.geocodedCities.map(c => c.city).join(', ')}
                 </p>
               )}
               {result.failed?.length > 0 && (
                 <p style={{ color: '#c53030', fontSize: 12, marginTop: 4 }}>
-                  Could not geocode: {result.failed.join(', ')}
+                  Could not locate: {result.failed.join(', ')}
                 </p>
               )}
             </div>
@@ -231,7 +293,7 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
               onClick={handleImport}
             >
               {importing
-                ? `Geocoding ${newCities.length} new dept${newCities.length !== 1 ? 's' : ''}…`
+                ? `Importing${newCities.length > 0 ? `, geocoding ${newCities.length}…` : '…'}`
                 : `Import ${validRows.length} record${validRows.length !== 1 ? 's' : ''}`}
             </button>
           )}

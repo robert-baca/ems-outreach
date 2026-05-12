@@ -446,9 +446,10 @@ body {
 }
 .preview-table td { padding: 6px 10px; border-bottom: 1px solid #f7fafc; color: #2d3748; }
 .preview-table tr:last-child td { border-bottom: none; }
-.badge-known { background: #c6f6d5; color: #276749; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
-.badge-new   { background: #bee3f8; color: #2b6cb0; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
-.badge-error { background: #fed7d7; color: #c53030; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
+.badge-known  { background: #c6f6d5; color: #276749; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
+.badge-new    { background: #bee3f8; color: #2b6cb0; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
+.badge-error  { background: #fed7d7; color: #c53030; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
+.badge-agency { background: #e9d8fd; color: #553c9a; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
 
 /* Geocode status */
 .geocode-status { font-size: 12px; color: #718096; }
