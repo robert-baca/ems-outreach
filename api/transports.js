@@ -1,9 +1,10 @@
 import { getTransports, addTransport, getCustomCities, upsertCustomCity } from './_db.js';
 import { geocodeCity } from './_geocode.js';
+import { getHospitalId } from './_hospital.js';
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
-    return res.json(await getTransports(req.query));
+    return res.json(await getTransports(req.query, getHospitalId(req)));
   }
 
   if (req.method === 'POST') {
@@ -27,7 +28,7 @@ export default async function handler(req, res) {
       }
     }
 
-    const record = await addTransport({ city, county, transport_count, month, year, type });
+    const record = await addTransport({ city, county, transport_count, month, year, type }, getHospitalId(req));
     return res.status(201).json({ ...record, newCity });
   }
 

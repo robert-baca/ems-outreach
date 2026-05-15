@@ -27,9 +27,11 @@ export default function App() {
   const [customCities, setCustomCities] = useState([]);
   const [showImport, setShowImport]         = useState(false);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
+  const [hospitalConfig, setHospitalConfig] = useState(null);
 
   useEffect(() => {
     fetch('/api/cities/custom').then(r => r.json()).then(setCustomCities).catch(() => {});
+    fetch('/api/hospital').then(r => r.json()).then(setHospitalConfig).catch(() => {});
   }, []);
 
   const fetchData = useCallback(async () => {
@@ -115,8 +117,8 @@ export default function App() {
           <span className="header-icon">🏥</span>
           <div>
             <h1>EMS Outreach</h1>
-            <span className="header-sub">{import.meta.env.VITE_HOSPITAL_NAME ?? 'Baylor Scott & White Medical Center — Grapevine'}</span>
-            <span className="header-tagline">{import.meta.env.VITE_HOSPITAL_TAGLINE ?? 'A Baylor Grapevine EMS Solution'}</span>
+            <span className="header-sub">{hospitalConfig?.name ?? import.meta.env.VITE_HOSPITAL_NAME ?? 'Baylor Scott & White Medical Center — Grapevine'}</span>
+            <span className="header-tagline">{hospitalConfig?.subtitle ?? import.meta.env.VITE_HOSPITAL_TAGLINE ?? 'A Baylor Grapevine EMS Solution'}</span>
           </div>
         </div>
         <div className="month-selector">

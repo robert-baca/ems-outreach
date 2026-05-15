@@ -1,7 +1,8 @@
-import { getStats } from './_db.js';
+import { getHospitalConfig } from './_db.js';
 import { getHospitalId } from './_hospital.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
-  res.json(await getStats(req.query, getHospitalId(req)));
+  const config = await getHospitalConfig(getHospitalId(req));
+  res.json(config);
 }
