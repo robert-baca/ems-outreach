@@ -98,8 +98,8 @@ function YoyView({ year, month }) {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      apiFetch(`/api/ytd-compare?compareYear=${year}&throughMonth=${throughMonth}&type=city`).then(r => r.json()),
-      apiFetch(`/api/ytd-compare?compareYear=${year}&throughMonth=${throughMonth}&type=agency`).then(r => r.json()),
+      apiFetch(`/api/trends?mode=ytd&compareYear=${year}&throughMonth=${throughMonth}&type=city`).then(r => r.json()),
+      apiFetch(`/api/trends?mode=ytd&compareYear=${year}&throughMonth=${throughMonth}&type=agency`).then(r => r.json()),
     ]).then(([city, agency]) => {
       setCityRows(city);
       setAgencyRows(agency);

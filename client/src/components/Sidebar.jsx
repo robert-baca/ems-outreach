@@ -60,7 +60,7 @@ export default function Sidebar({
 
   const handlePurge = async (city, type) => {
     if (!confirm(`Delete ALL records for "${city}" (${type})? This cannot be undone.`)) return;
-    await apiFetch('/api/purge', {
+    await apiFetch('/api/transports', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ city, type }),
@@ -387,7 +387,7 @@ function CityDetail({ city, history, month, year, onBack, coords, isCustom, onPi
     if (!editLat || !editLon) return;
     setPinBusy(true); setPinMsg('');
     try {
-      await apiFetch('/api/cities/custom', {
+      await apiFetch('/api/cities', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ city, lat: +editLat, lon: +editLon }),
       });
@@ -401,7 +401,7 @@ function CityDetail({ city, history, month, year, onBack, coords, isCustom, onPi
     if (!confirm(`Remove the "${city}" pin from the map?`)) return;
     setPinBusy(true);
     try {
-      await apiFetch('/api/cities/custom', {
+      await apiFetch('/api/cities', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ city }),
       });
@@ -414,7 +414,7 @@ function CityDetail({ city, history, month, year, onBack, coords, isCustom, onPi
     if (!connectName.trim() || !coords) return;
     setPinBusy(true); setPinMsg('');
     try {
-      await apiFetch('/api/cities/custom', {
+      await apiFetch('/api/cities', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ city: connectName.trim(), lat: coords.lat, lon: coords.lon }),
       });

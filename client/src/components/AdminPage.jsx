@@ -11,7 +11,7 @@ function HospitalsPanel() {
 
   const load = () => {
     setLoading(true);
-    apiFetch('/api/admin/hospitals').then(r => r.json()).then(rows => {
+    apiFetch('/api/admin?resource=hospitals').then(r => r.json()).then(rows => {
       setHospitals(rows);
     }).catch(() => setError('Failed to load hospitals')).finally(() => setLoading(false));
   };
@@ -37,7 +37,7 @@ function HospitalsPanel() {
     setSaving(true);
     setError('');
     try {
-      const resp = await apiFetch('/api/admin/hospitals', {
+      const resp = await apiFetch('/api/admin?resource=hospitals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -140,7 +140,7 @@ function UsersPanel({ hospitals }) {
 
   const load = () => {
     setLoading(true);
-    apiFetch('/api/admin/users').then(r => r.json()).then(setUsers)
+    apiFetch('/api/admin?resource=users').then(r => r.json()).then(setUsers)
       .catch(() => setError('Failed to load users')).finally(() => setLoading(false));
   };
 
@@ -149,7 +149,7 @@ function UsersPanel({ hospitals }) {
   const assign = async (userId, hospitalId) => {
     setSaving(userId + ':hospital');
     try {
-      await apiFetch('/api/admin/users', {
+      await apiFetch('/api/admin?resource=users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, hospitalId: hospitalId || null }),
@@ -162,7 +162,7 @@ function UsersPanel({ hospitals }) {
   const toggleAdmin = async (userId, current) => {
     setSaving(userId + ':admin');
     try {
-      await apiFetch('/api/admin/users', {
+      await apiFetch('/api/admin?resource=users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, isAdmin: !current }),
@@ -235,7 +235,7 @@ export default function AdminPage({ onClose }) {
   const [hospitals, setHospitals] = useState([]);
 
   useEffect(() => {
-    apiFetch('/api/admin/hospitals').then(r => r.json()).then(setHospitals).catch(() => {});
+    apiFetch('/api/admin?resource=hospitals').then(r => r.json()).then(setHospitals).catch(() => {});
   }, []);
 
   return (

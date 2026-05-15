@@ -67,7 +67,7 @@ function AppInner() {
   const [hospitalConfig, setHospitalConfig] = useState(null);
 
   useEffect(() => {
-    apiFetch('/api/cities/custom').then(r => r.json()).then(setCustomCities).catch(() => {});
+    apiFetch('/api/cities').then(r => r.json()).then(setCustomCities).catch(() => {});
     apiFetch('/api/hospital').then(r => r.json()).then(setHospitalConfig).catch(() => {});
   }, []);
 
@@ -99,7 +99,7 @@ function AppInner() {
 
   const handleCityClick = useCallback(async (cityName) => {
     setSelectedCity(cityName);
-    const data = await apiFetch(`/api/city-history?city=${encodeURIComponent(cityName)}`).then(r => r.json());
+    const data = await apiFetch(`/api/cities?mode=history&city=${encodeURIComponent(cityName)}`).then(r => r.json());
     setCityHistory(data);
   }, []);
 
@@ -110,7 +110,7 @@ function AppInner() {
       body: JSON.stringify(entry),
     }).then(r => r.json());
     if (resp.newCity) {
-      apiFetch('/api/cities/custom').then(r => r.json()).then(setCustomCities);
+      apiFetch('/api/cities').then(r => r.json()).then(setCustomCities);
     }
     fetchData();
     if (selectedCity && entry.city?.toLowerCase() === selectedCity.toLowerCase()) {
@@ -142,7 +142,7 @@ function AppInner() {
 
   const handleImportSuccess = (result) => {
     if (result.geocoded > 0) {
-      apiFetch('/api/cities/custom').then(r => r.json()).then(setCustomCities);
+      apiFetch('/api/cities').then(r => r.json()).then(setCustomCities);
     }
     fetchData();
   };
@@ -203,7 +203,7 @@ function AppInner() {
           onAdd={handleAdd}
           onDelete={handleDelete}
           customCities={customCities}
-          onPinsChange={() => apiFetch('/api/cities/custom').then(r => r.json()).then(setCustomCities)}
+          onPinsChange={() => apiFetch('/api/cities').then(r => r.json()).then(setCustomCities)}
           onRefresh={fetchData}
         />
         <main className="map-container">

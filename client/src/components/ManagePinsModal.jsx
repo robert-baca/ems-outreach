@@ -100,13 +100,13 @@ export default function ManagePinsModal({ customCities, onClose, onChange }) {
   const [pins, setPins]       = useState(customCities);
 
   const refresh = async () => {
-    const data = await fetch('/api/cities/custom').then(r => r.json());
+    const data = await fetch('/api/cities').then(r => r.json());
     setPins(data);
     onChange(data);
   };
 
   const handleSave = async (row) => {
-    await fetch('/api/cities/custom', {
+    await fetch('/api/cities', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(row),
@@ -117,7 +117,7 @@ export default function ManagePinsModal({ customCities, onClose, onChange }) {
 
   const handleDelete = async (cityName) => {
     if (!confirm(`Remove "${cityName}" from the map?`)) return;
-    await fetch('/api/cities/custom', {
+    await fetch('/api/cities', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ city: cityName }),

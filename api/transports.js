@@ -1,4 +1,4 @@
-import { getTransports, addTransport, getCustomCities, upsertCustomCity } from './_db.js';
+import { getTransports, addTransport, getCustomCities, upsertCustomCity, deleteAllByName } from './_db.js';
 import { geocodeCity } from './_geocode.js';
 import { requireAuth } from './_auth.js';
 
@@ -33,6 +33,14 @@ export default async function handler(req, res) {
 
     const record = await addTransport({ city, county, transport_count, month, year, type }, hospitalId);
     return res.status(201).json({ ...record, newCity });
+  }
+
+  // DELETE without an ID = purge all records for a city/type
+  if (req.method === 'DELETE') {
+    const { city, type } = req.body;
+    if (!city || !type) return res.status(400).json({ error: 'city and type required' });
+    await deleteAllByName(city, type, hospitalId);
+    return res.json({ ok: true });
   }
 
   res.status(405).end();
