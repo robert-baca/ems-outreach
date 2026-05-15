@@ -1,9 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth, SignIn, SignedIn, SignedOut, useClerk } from '@clerk/clerk-react';
 import MapView from './components/MapView.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import ImportModal from './components/ImportModal.jsx';
 import QuickEntryModal from './components/QuickEntryModal.jsx';
+import AdminPage from './components/AdminPage.jsx';
 import { MONTHS } from './cityData.js';
+import { apiFetch, setTokenGetter } from './api.js';
+
+const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 const now = new Date();
 
@@ -11,7 +16,38 @@ function prevMonthYear(month, year) {
   return month === 1 ? { month: 12, year: year - 1 } : { month: month - 1, year };
 }
 
-export default function App() {
+function AppShell() {
+  if (CLERK_ENABLED) {
+    return (
+      <>
+        <SignedOut>
+          <div className="signin-screen">
+            <div className="signin-card">
+              <span className="signin-icon">🏥</span>
+              <h1>EMS Outreach</h1>
+              <p>Baylor Scott &amp; White</p>
+              <SignIn routing="hash" />
+            </div>
+          </div>
+        </SignedOut>
+        <SignedIn>
+          <AppInner />
+        </SignedIn>
+      </>
+    );
+  }
+  return <AppInner />;
+}
+
+export default AppShell;
+
+function AppInner() {
+  const { getToken } = CLERK_ENABLED ? useAuth() : { getToken: null };
+  const { signOut } = CLERK_ENABLED ? useClerk() : { signOut: null };
+
+  useEffect(() => {
+    if (getToken) setTokenGetter(getToken);
+  }, [getToken]);
   const [month, setMonth]   = useState(now.getMonth() + 1);
   const [year, setYear]     = useState(now.getFullYear());
   const [viewMode, setViewMode] = useState('month'); // 'month' | 'year'
@@ -27,11 +63,12 @@ export default function App() {
   const [customCities, setCustomCities] = useState([]);
   const [showImport, setShowImport]         = useState(false);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
+  const [showAdmin, setShowAdmin]           = useState(false);
   const [hospitalConfig, setHospitalConfig] = useState(null);
 
   useEffect(() => {
-    fetch('/api/cities/custom').then(r => r.json()).then(setCustomCities).catch(() => {});
-    fetch('/api/hospital').then(r => r.json()).then(setHospitalConfig).catch(() => {});
+    apiFetch('/api/cities/custom').then(r => r.json()).then(setCustomCities).catch(() => {});
+    apiFetch('/api/hospital').then(r => r.json()).then(setHospitalConfig).catch(() => {});
   }, []);
 
   const fetchData = useCallback(async () => {
@@ -42,11 +79,11 @@ export default function App() {
     const prevParam = isYear ? `year=${year - 1}` : `month=${pm}&year=${py}`;
     try {
       const [sRes, tRes, pRes, asRes, atRes] = await Promise.all([
-        fetch(`/api/stats?${mParam ? mParam.slice(1) + '&' : ''}year=${year}&type=city`),
-        fetch(`/api/transports?month=${month}&year=${year}&type=city`),
-        fetch(`/api/stats?${prevParam}&type=city`),
-        fetch(`/api/stats?${mParam ? mParam.slice(1) + '&' : ''}year=${year}&type=agency`),
-        fetch(`/api/transports?month=${month}&year=${year}&type=agency`),
+        apiFetch(`/api/stats?${mParam ? mParam.slice(1) + '&' : ''}year=${year}&type=city`),
+        apiFetch(`/api/transports?month=${month}&year=${year}&type=city`),
+        apiFetch(`/api/stats?${prevParam}&type=city`),
+        apiFetch(`/api/stats?${mParam ? mParam.slice(1) + '&' : ''}year=${year}&type=agency`),
+        apiFetch(`/api/transports?month=${month}&year=${year}&type=agency`),
       ]);
       setStats(await sRes.json());
       setTransports(await tRes.json());
@@ -62,18 +99,18 @@ export default function App() {
 
   const handleCityClick = useCallback(async (cityName) => {
     setSelectedCity(cityName);
-    const data = await fetch(`/api/city-history?city=${encodeURIComponent(cityName)}`).then(r => r.json());
+    const data = await apiFetch(`/api/city-history?city=${encodeURIComponent(cityName)}`).then(r => r.json());
     setCityHistory(data);
   }, []);
 
   const handleAdd = async (entry) => {
-    const resp = await fetch('/api/transports', {
+    const resp = await apiFetch('/api/transports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(entry),
     }).then(r => r.json());
     if (resp.newCity) {
-      fetch('/api/cities/custom').then(r => r.json()).then(setCustomCities);
+      apiFetch('/api/cities/custom').then(r => r.json()).then(setCustomCities);
     }
     fetchData();
     if (selectedCity && entry.city?.toLowerCase() === selectedCity.toLowerCase()) {
@@ -83,7 +120,7 @@ export default function App() {
 
   const handleQuickSave = async (rows) => {
     await Promise.all(rows.map(row =>
-      fetch('/api/transports', {
+      apiFetch('/api/transports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,14 +135,14 @@ export default function App() {
   };
 
   const handleDelete = async (id) => {
-    await fetch(`/api/transports/${id}`, { method: 'DELETE' });
+    await apiFetch(`/api/transports/${id}`, { method: 'DELETE' });
     fetchData();
     if (selectedCity) handleCityClick(selectedCity);
   };
 
   const handleImportSuccess = (result) => {
     if (result.geocoded > 0) {
-      fetch('/api/cities/custom').then(r => r.json()).then(setCustomCities);
+      apiFetch('/api/cities/custom').then(r => r.json()).then(setCustomCities);
     }
     fetchData();
   };
@@ -142,6 +179,12 @@ export default function App() {
           {loading && <span className="loading-dot" />}
           <button className="import-header-btn" onClick={() => setShowQuickEntry(true)}>✏ Quick Entry</button>
           <button className="import-header-btn" onClick={() => setShowImport(true)}>⬆ Import</button>
+          {CLERK_ENABLED && hospitalConfig?.isAdmin && (
+            <button className="import-header-btn" onClick={() => setShowAdmin(true)}>⚙ Admin</button>
+          )}
+          {CLERK_ENABLED && signOut && (
+            <button className="import-header-btn" onClick={() => signOut()} title="Sign out">↩ Sign Out</button>
+          )}
         </div>
       </header>
 
@@ -160,7 +203,7 @@ export default function App() {
           onAdd={handleAdd}
           onDelete={handleDelete}
           customCities={customCities}
-          onPinsChange={() => fetch('/api/cities/custom').then(r => r.json()).then(setCustomCities)}
+          onPinsChange={() => apiFetch('/api/cities/custom').then(r => r.json()).then(setCustomCities)}
           onRefresh={fetchData}
         />
         <main className="map-container">
@@ -191,6 +234,9 @@ export default function App() {
           onClose={() => setShowQuickEntry(false)}
           onSave={handleQuickSave}
         />
+      )}
+      {showAdmin && (
+        <AdminPage onClose={() => setShowAdmin(false)} />
       )}
     </div>
   );

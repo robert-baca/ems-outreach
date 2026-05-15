@@ -1,12 +1,13 @@
 import { addTransport, getCustomCities, upsertCustomCity } from './_db.js';
 import { geocodeCity } from './_geocode.js';
-import { getHospitalId } from './_hospital.js';
+import { requireAuth } from './_auth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+  const hospitalId = await requireAuth(req, res);
+  if (!hospitalId) return;
 
   const { records = [], newCities = [] } = req.body;
-  const hospitalId = getHospitalId(req);
 
   const existing = await getCustomCities(hospitalId);
   const existingSet = new Set(existing.map(c => c.city.toLowerCase()));

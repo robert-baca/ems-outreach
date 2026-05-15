@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MONTHS } from '../cityData.js';
+import { apiFetch } from '../api.js';
 
 const COLORS = [
   '#1a365d', '#e53e3e', '#48bb78', '#ed8936', '#667eea',
@@ -97,8 +98,8 @@ function YoyView({ year, month }) {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch(`/api/ytd-compare?compareYear=${year}&throughMonth=${throughMonth}&type=city`).then(r => r.json()),
-      fetch(`/api/ytd-compare?compareYear=${year}&throughMonth=${throughMonth}&type=agency`).then(r => r.json()),
+      apiFetch(`/api/ytd-compare?compareYear=${year}&throughMonth=${throughMonth}&type=city`).then(r => r.json()),
+      apiFetch(`/api/ytd-compare?compareYear=${year}&throughMonth=${throughMonth}&type=agency`).then(r => r.json()),
     ]).then(([city, agency]) => {
       setCityRows(city);
       setAgencyRows(agency);
@@ -206,8 +207,8 @@ export default function GraphsTab({ year, month }) {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch(`/api/trends?year=${year}&type=city`).then(r => r.json()),
-      fetch(`/api/trends?year=${year}&type=agency`).then(r => r.json()),
+      apiFetch(`/api/trends?year=${year}&type=city`).then(r => r.json()),
+      apiFetch(`/api/trends?year=${year}&type=agency`).then(r => r.json()),
     ]).then(([city, agency]) => {
       setCityData(city);
       setAgencyData(agency);

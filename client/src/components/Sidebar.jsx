@@ -4,6 +4,7 @@ import GraphsTab from './GraphsTab.jsx';
 import AiTab from './AiTab.jsx';
 import { getColor } from './MapView.jsx';
 import { MONTHS, DFW_CITIES } from '../cityData.js';
+import { apiFetch } from '../api.js';
 
 export default function Sidebar({
   stats, transports, agencyStats, agencyTransports,
@@ -41,7 +42,7 @@ export default function Sidebar({
     if (!linkingCity || !linkTarget.trim()) return;
     setLinkBusy(true);
     try {
-      await fetch('/api/aliases', {
+      await apiFetch('/api/aliases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ alias: linkingCity, canonical: linkTarget.trim(), changeType: linkChangeType }),
@@ -59,7 +60,7 @@ export default function Sidebar({
 
   const handlePurge = async (city, type) => {
     if (!confirm(`Delete ALL records for "${city}" (${type})? This cannot be undone.`)) return;
-    await fetch('/api/purge', {
+    await apiFetch('/api/purge', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ city, type }),
@@ -386,7 +387,7 @@ function CityDetail({ city, history, month, year, onBack, coords, isCustom, onPi
     if (!editLat || !editLon) return;
     setPinBusy(true); setPinMsg('');
     try {
-      await fetch('/api/cities/custom', {
+      await apiFetch('/api/cities/custom', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ city, lat: +editLat, lon: +editLon }),
       });
@@ -400,7 +401,7 @@ function CityDetail({ city, history, month, year, onBack, coords, isCustom, onPi
     if (!confirm(`Remove the "${city}" pin from the map?`)) return;
     setPinBusy(true);
     try {
-      await fetch('/api/cities/custom', {
+      await apiFetch('/api/cities/custom', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ city }),
       });
@@ -413,7 +414,7 @@ function CityDetail({ city, history, month, year, onBack, coords, isCustom, onPi
     if (!connectName.trim() || !coords) return;
     setPinBusy(true); setPinMsg('');
     try {
-      await fetch('/api/cities/custom', {
+      await apiFetch('/api/cities/custom', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ city: connectName.trim(), lat: coords.lat, lon: coords.lon }),
       });

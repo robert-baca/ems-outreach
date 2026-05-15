@@ -1,8 +1,9 @@
 import { getAliases, setAlias, deleteAlias } from './_db.js';
-import { getHospitalId } from './_hospital.js';
+import { requireAuth } from './_auth.js';
 
 export default async function handler(req, res) {
-  const hospitalId = getHospitalId(req);
+  const hospitalId = await requireAuth(req, res);
+  if (!hospitalId) return;
 
   if (req.method === 'GET') {
     return res.json(await getAliases(hospitalId));

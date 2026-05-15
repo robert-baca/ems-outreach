@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { MONTHS } from '../cityData.js';
+import { apiFetch } from '../api.js';
 
 export default function AiTab({ stats, agencyStats, month, year, viewMode }) {
   const [messages, setMessages] = useState([]);
@@ -48,7 +49,7 @@ Total agency transports: ${agencyStats.reduce((s, r) => s + r.total, 0)}`;
     setMessages(prev => [...prev, aiMsg]);
 
     try {
-      const resp = await fetch('/api/ask', {
+      const resp = await apiFetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q, context: buildContext() }),

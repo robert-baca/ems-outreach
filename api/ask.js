@@ -1,8 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { requireAuth } from './_auth.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const SYSTEM_PROMPT = `You are an EMS outreach analytics assistant for Baylor Scott & White Medical Center – Grapevine, TX. \
+const SYSTEM_PROMPT = `You are an EMS outreach analytics assistant for Baylor Scott & White Medical Center. \
 You help the outreach coordinator understand transport patterns, identify growth opportunities, and make data-driven decisions.
 
 Your role is to:
@@ -17,11 +18,12 @@ The user will provide current stats context in their message. Respond conversati
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+  const hospitalId = await requireAuth(req, res);
+  if (!hospitalId) return;
 
   const { question, context } = req.body;
   if (!question) return res.status(400).json({ error: 'question required' });
 
-  // Build user message with data context
   const userMessage = context
     ? `${context}\n\nMy question: ${question}`
     : question;

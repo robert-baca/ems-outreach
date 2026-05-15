@@ -1,9 +1,11 @@
 import { getMonthlyBreakdown } from './_db.js';
-import { getHospitalId } from './_hospital.js';
+import { requireAuth } from './_auth.js';
 
 export default async function handler(req, res) {
+  if (req.method !== 'GET') return res.status(405).end();
+  const hospitalId = await requireAuth(req, res);
+  if (!hospitalId) return;
   const { year, type = 'city' } = req.query;
   if (!year) return res.status(400).json({ error: 'year required' });
-  const rows = await getMonthlyBreakdown(year, type, getHospitalId(req));
-  res.json(rows);
+  res.json(await getMonthlyBreakdown(year, type, hospitalId));
 }

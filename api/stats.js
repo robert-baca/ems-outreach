@@ -1,7 +1,9 @@
 import { getStats } from './_db.js';
-import { getHospitalId } from './_hospital.js';
+import { requireAuth } from './_auth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
-  res.json(await getStats(req.query, getHospitalId(req)));
+  const hospitalId = await requireAuth(req, res);
+  if (!hospitalId) return;
+  res.json(await getStats(req.query, hospitalId));
 }
