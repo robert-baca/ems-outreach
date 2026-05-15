@@ -7,5 +7,6 @@ server/custom_cities.json
 server/counties_cache.json
 .env
 .env.local
+server/.env
 .vercel
 .claude/

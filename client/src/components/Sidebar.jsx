@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import TransportForm from './TransportForm.jsx';
 import GraphsTab from './GraphsTab.jsx';
+import AiTab from './AiTab.jsx';
 import { getColor } from './MapView.jsx';
 import { MONTHS, DFW_CITIES } from '../cityData.js';
 
@@ -93,6 +94,7 @@ export default function Sidebar({
         <button className={tab === 'agencies' ? 'active' : ''} onClick={() => setTab('agencies')}>Agencies ({agencyStats.length})</button>
         <button className={tab === 'list'     ? 'active' : ''} onClick={() => setTab('list')}>Log</button>
         <button className={tab === 'graphs'   ? 'active' : ''} onClick={() => setTab('graphs')}>Graphs</button>
+        <button className={tab === 'ai'       ? 'active' : ''} onClick={() => setTab('ai')}>Ask AI</button>
         {selectedCity && (
           <button className={tab === 'city' ? 'active' : ''} onClick={() => setTab('city')}
             style={{ color: '#1a365d', fontWeight: 800 }}>📍</button>
@@ -214,6 +216,10 @@ export default function Sidebar({
 
         {tab === 'graphs' && (
           <GraphsTab year={year} month={month} />
+        )}
+
+        {tab === 'ai' && (
+          <AiTab stats={stats} agencyStats={agencyStats} month={month} year={year} viewMode={viewMode} />
         )}
 
         {tab === 'city' && (() => {

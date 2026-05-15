@@ -1,9 +1,11 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { getTransports, getStats, addTransport, deleteTransport, getCityHistory } from './db.js';
+import Anthropic from '@anthropic-ai/sdk';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -120,6 +122,57 @@ app.post('/api/transports', async (req, res) => {
 app.delete('/api/transports/:id', (req, res) => {
   deleteTransport(req.params.id);
   res.json({ success: true });
+});
+
+// ── AI Ask endpoint ────────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are an EMS outreach analytics assistant for Baylor Scott & White Medical Center – Grapevine, TX. \
+You help the outreach coordinator understand transport patterns, identify growth opportunities, and make data-driven decisions.
+
+Your role is to:
+- Analyze transport volume trends across cities and agencies in the DFW metroplex
+- Identify cities or agencies with unusually high or low activity
+- Suggest outreach strategies to improve relationships with EMS agencies
+- Highlight month-over-month or year-over-year patterns
+- Point out which counties or areas need more attention
+- Be concise, practical, and grounded in the data provided
+
+The user will provide current stats context in their message. Respond conversationally but keep answers focused and actionable.`;
+
+app.post('/api/ask', async (req, res) => {
+  const { question, context } = req.body;
+  if (!question) return res.status(400).json({ error: 'question required' });
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set' });
+
+  const client = new Anthropic({ apiKey });
+  const userMessage = context ? `${context}\n\nMy question: ${question}` : question;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  try {
+    const stream = client.messages.stream({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: userMessage }],
+    });
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+        res.write(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`);
+      }
+    }
+
+    res.write('data: [DONE]\n\n');
+    res.end();
+  } catch (err) {
+    console.error('Ask API error:', err);
+    res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+    res.end();
+  }
 });
 
 // ── Serve React build ──────────────────────────────────────────────────────────
