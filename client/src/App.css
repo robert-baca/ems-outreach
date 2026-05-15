@@ -779,3 +779,15 @@ body {
 .yoy-delta.up { color: #276749; }
 .yoy-delta.down { color: #c53030; }
 .yoy-delta-pct { font-weight: 400; font-size: 10px; }
+
+/* ── All-tab type badge + purge button ── */
+.all-type-badge {
+  padding: 2px 7px; border-radius: 10px; font-size: 10px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+}
+.purge-btn {
+  background: none; border: none; cursor: pointer; font-size: 13px;
+  padding: 2px 4px; opacity: .5; transition: opacity .15s;
+  margin-left: auto;
+}
+.purge-btn:hover { opacity: 1; }

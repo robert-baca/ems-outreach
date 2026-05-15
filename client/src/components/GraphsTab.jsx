@@ -104,7 +104,17 @@ function YoyView({ year, month }) {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [year, month]);
 
-  const rows = type === 'city' ? cityRows : agencyRows;
+  const rows = type === 'all'
+    ? (() => {
+        const map = {};
+        [...cityRows, ...agencyRows].forEach(r => {
+          if (!map[r.city]) map[r.city] = { city: r.city, county: r.county, base: 0, compare: 0 };
+          map[r.city].base += r.base;
+          map[r.city].compare += r.compare;
+        });
+        return Object.values(map).sort((a, b) => b.compare - a.compare || b.base - a.base);
+      })()
+    : type === 'city' ? cityRows : agencyRows;
   const baseTotal = rows.reduce((s, r) => s + r.base, 0);
   const compareTotal = rows.reduce((s, r) => s + r.compare, 0);
   const netChange = compareTotal - baseTotal;
@@ -120,6 +130,7 @@ function YoyView({ year, month }) {
       <div className="graphs-type-toggle">
         <button className={`graphs-type-btn${type === 'city' ? ' active' : ''}`} onClick={() => setType('city')}>Cities</button>
         <button className={`graphs-type-btn agency${type === 'agency' ? ' active' : ''}`} onClick={() => setType('agency')}>Agencies</button>
+        <button className={`graphs-type-btn${type === 'all' ? ' active' : ''}`} onClick={() => setType('all')}>All</button>
       </div>
 
       {loading ? (
@@ -202,7 +213,14 @@ export default function GraphsTab({ year, month }) {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [year]);
 
-  const data = type === 'city' ? cityData : agencyData;
+  const data = type === 'all'
+    ? [...cityData, ...agencyData].reduce((acc, row) => {
+        const key = `${row.city}|${row.month}`;
+        const existing = acc.find(r => r.city === row.city && r.month === row.month);
+        if (existing) { existing.total += row.total; return acc; }
+        return [...acc, { ...row }];
+      }, [])
+    : type === 'city' ? cityData : agencyData;
 
   const cityTotals = {};
   data.forEach(({ city, total }) => { cityTotals[city] = (cityTotals[city] || 0) + total; });
@@ -244,6 +262,7 @@ export default function GraphsTab({ year, month }) {
           <div className="graphs-type-toggle">
             <button className={`graphs-type-btn${type === 'city' ? ' active' : ''}`} onClick={() => setType('city')}>Cities</button>
             <button className={`graphs-type-btn agency${type === 'agency' ? ' active' : ''}`} onClick={() => setType('agency')}>Agencies</button>
+            <button className={`graphs-type-btn${type === 'all' ? ' active' : ''}`} onClick={() => setType('all')}>All</button>
           </div>
 
           {loading ? (

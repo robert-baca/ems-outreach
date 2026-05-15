@@ -155,6 +155,12 @@ export async function deleteCustomCity(city) {
   await sql`DELETE FROM custom_cities WHERE LOWER(city) = LOWER(${city})`;
 }
 
+export async function deleteAllByName(city, type) {
+  const sql = db();
+  await initDB();
+  await sql`DELETE FROM transports WHERE LOWER(city) = LOWER(${city}) AND COALESCE(type,'city') = ${type}`;
+}
+
 export async function getYtdCompare({ throughMonth, compareYear, type = 'city' }) {
   const sql = db();
   await initDB();

@@ -124,6 +124,19 @@ app.delete('/api/transports/:id', (req, res) => {
   res.json({ success: true });
 });
 
+app.delete('/api/purge', (req, res) => {
+  const { city, type } = req.body;
+  if (!city || !type) return res.status(400).json({ error: 'city and type required' });
+  const dataFile = join(__dirname, 'data.json');
+  if (!existsSync(dataFile)) return res.json({ ok: true });
+  const data = JSON.parse(readFileSync(dataFile, 'utf8'));
+  data.transports = data.transports.filter(
+    t => !(t.city.toLowerCase() === city.toLowerCase() && (t.type || 'city') === type)
+  );
+  writeFileSync(dataFile, JSON.stringify(data, null, 2));
+  res.json({ ok: true });
+});
+
 // ── AI Ask endpoint ────────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are an EMS outreach analytics assistant for Baylor Scott & White Medical Center – Grapevine, TX. \
 You help the outreach coordinator understand transport patterns, identify growth opportunities, and make data-driven decisions.

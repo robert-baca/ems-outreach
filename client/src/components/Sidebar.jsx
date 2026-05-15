@@ -57,6 +57,16 @@ export default function Sidebar({
     if (selectedCity) setTab('city');
   }, [selectedCity]);
 
+  const handlePurge = async (city, type) => {
+    if (!confirm(`Delete ALL records for "${city}" (${type})? This cannot be undone.`)) return;
+    await fetch('/api/purge', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ city, type }),
+    });
+    onRefresh?.();
+  };
+
   const handleBack = () => {
     onClearCity();
     setTab('stats');
@@ -92,6 +102,7 @@ export default function Sidebar({
         <button className={tab === 'add'      ? 'active' : ''} onClick={() => setTab('add')}>Add</button>
         <button className={tab === 'stats'    ? 'active' : ''} onClick={() => setTab('stats')}>Cities ({stats.length})</button>
         <button className={tab === 'agencies' ? 'active' : ''} onClick={() => setTab('agencies')}>Agencies ({agencyStats.length})</button>
+        <button className={tab === 'all'      ? 'active' : ''} onClick={() => setTab('all')}>All</button>
         <button className={tab === 'list'     ? 'active' : ''} onClick={() => setTab('list')}>Log</button>
         <button className={tab === 'graphs'   ? 'active' : ''} onClick={() => setTab('graphs')}>Graphs</button>
         <button className={tab === 'ai'       ? 'active' : ''} onClick={() => setTab('ai')}>Ask AI</button>
@@ -191,12 +202,54 @@ export default function Sidebar({
                       title="Link to a city to show on map">
                       🗺 link to map
                     </button>
+                    <button className="purge-btn" title="Delete all records for this agency"
+                      onClick={() => handlePurge(s.city, 'agency')}>
+                      🗑
+                    </button>
                   </li>
                 ))}
               </ul>
             )}
           </>
         )}
+
+        {tab === 'all' && (() => {
+          const combined = [
+            ...stats.map(s => ({ ...s, kind: 'city' })),
+            ...agencyStats.map(s => ({ ...s, kind: 'agency' })),
+          ].sort((a, b) => b.total - a.total);
+          const combinedTotal = combined.reduce((s, r) => s + r.total, 0);
+          return (
+            <>
+              <p className="stats-header">
+                {viewMode === 'year' ? `${year} Full Year` : `${MONTHS[month - 1]} ${year}`} — {combinedTotal} total transport{combinedTotal !== 1 ? 's' : ''}
+              </p>
+              {combined.length === 0 ? (
+                <div className="empty-state">No transports logged.</div>
+              ) : (
+                <ul className="stats-list">
+                  {combined.map((s, i) => (
+                    <li key={`${s.kind}-${s.city}`} className="stats-list-item" style={{ flexWrap: 'wrap', gap: 4 }}>
+                      <span className="stats-rank">#{i + 1}</span>
+                      <span className="stats-city">{s.city}</span>
+                      <span className="stats-count" style={{
+                        background: s.kind === 'agency' ? '#667eea'
+                          : getColor(s.total, viewMode === 'year') === '#e2e8f0' ? '#a0aec0'
+                          : getColor(s.total, viewMode === 'year'),
+                        color: '#fff',
+                      }}>
+                        {s.total}
+                      </span>
+                      <span className="all-type-badge" style={{ background: s.kind === 'agency' ? '#e9d8fd' : '#bee3f8', color: s.kind === 'agency' ? '#553c9a' : '#2b6cb0' }}>
+                        {s.kind}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          );
+        })()}
 
         {tab === 'list' && (
           <>
