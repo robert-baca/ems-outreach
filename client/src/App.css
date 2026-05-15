@@ -712,3 +712,70 @@ body {
 }
 .ai-send-btn:hover:not(:disabled) { background: #2a4a7f; }
 .ai-send-btn:disabled { background: #a0aec0; cursor: not-allowed; }
+
+/* ── Year vs Year view ── */
+.graphs-view-toggle {
+  display: flex; gap: 4px; margin-bottom: 10px;
+}
+.graphs-view-btn {
+  flex: 1; padding: 6px 10px; font-size: 12px; font-weight: 600;
+  border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer;
+  background: #fff; color: #4a5568; transition: all .15s;
+}
+.graphs-view-btn.active {
+  background: #1a365d; color: #fff; border-color: #1a365d;
+}
+
+.yoy-view { display: flex; flex-direction: column; gap: 10px; }
+
+.yoy-summary {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 12px 10px; gap: 6px;
+}
+.yoy-summary-block { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; }
+.yoy-summary-year { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: #718096; }
+.yoy-summary-val { font-size: 22px; font-weight: 800; color: #1a365d; line-height: 1.1; }
+.yoy-summary-period { font-size: 10px; color: #a0aec0; }
+.yoy-summary-arrow { display: flex; flex-direction: column; align-items: center; }
+
+.yoy-change-badge {
+  font-size: 13px; font-weight: 700; padding: 4px 10px;
+  border-radius: 20px; white-space: nowrap;
+}
+.yoy-change-badge.positive { background: #f0fff4; color: #276749; }
+.yoy-change-badge.negative { background: #fff5f5; color: #c53030; }
+.yoy-change-badge.neutral  { background: #f7fafc; color: #718096; }
+.yoy-pct { font-size: 11px; opacity: .8; }
+
+.yoy-legend-row {
+  display: flex; align-items: center; gap: 4px; font-size: 11px; color: #4a5568;
+}
+.yoy-legend-swatch {
+  display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+}
+
+.yoy-table { display: flex; flex-direction: column; gap: 6px; }
+
+.yoy-row {
+  display: flex; align-items: center; gap: 6px; font-size: 12px;
+  padding: 4px 0; border-bottom: 1px solid #f0f0f0;
+}
+.yoy-row-name { width: 96px; flex-shrink: 0; font-weight: 600; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yoy-bars { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.yoy-bar-group { display: flex; align-items: center; gap: 4px; }
+.yoy-bar-base {
+  height: 7px; background: #a0aec0; border-radius: 3px; min-width: 2px; transition: width .3s;
+}
+.yoy-bar-compare {
+  height: 7px; background: #1a365d; border-radius: 3px; min-width: 2px; transition: width .3s;
+}
+.yoy-bar-label { font-size: 10px; color: #718096; min-width: 20px; }
+
+.yoy-delta {
+  width: 56px; flex-shrink: 0; text-align: right; font-size: 11px;
+  font-weight: 700; color: #718096;
+}
+.yoy-delta.up { color: #276749; }
+.yoy-delta.down { color: #c53030; }
+.yoy-delta-pct { font-weight: 400; font-size: 10px; }

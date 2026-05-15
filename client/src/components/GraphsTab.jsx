@@ -86,10 +86,109 @@ function MultiLineChart({ cityMonthly, cities }) {
   );
 }
 
+function YoyView({ year, month }) {
+  const [cityRows, setCityRows] = useState([]);
+  const [agencyRows, setAgencyRows] = useState([]);
+  const [type, setType] = useState('city');
+  const [loading, setLoading] = useState(false);
+  const baseYear = year - 1;
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      fetch(`/api/ytd-compare?compareYear=${year}&throughMonth=${month}&type=city`).then(r => r.json()),
+      fetch(`/api/ytd-compare?compareYear=${year}&throughMonth=${month}&type=agency`).then(r => r.json()),
+    ]).then(([city, agency]) => {
+      setCityRows(city);
+      setAgencyRows(agency);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [year, month]);
+
+  const rows = type === 'city' ? cityRows : agencyRows;
+  const baseTotal = rows.reduce((s, r) => s + r.base, 0);
+  const compareTotal = rows.reduce((s, r) => s + r.compare, 0);
+  const netChange = compareTotal - baseTotal;
+  const pct = baseTotal > 0 ? Math.round((netChange / baseTotal) * 100) : null;
+
+  const maxVal = Math.max(...rows.flatMap(r => [r.base, r.compare]), 1);
+  const BAR_MAX_W = 120;
+
+  const periodLabel = `Jan–${SHORT[month - 1]}`;
+
+  return (
+    <div className="yoy-view">
+      <div className="graphs-type-toggle">
+        <button className={`graphs-type-btn${type === 'city' ? ' active' : ''}`} onClick={() => setType('city')}>Cities</button>
+        <button className={`graphs-type-btn agency${type === 'agency' ? ' active' : ''}`} onClick={() => setType('agency')}>Agencies</button>
+      </div>
+
+      {loading ? (
+        <div className="empty-state">Loading…</div>
+      ) : rows.length === 0 ? (
+        <div className="empty-state">No data to compare for {year}.</div>
+      ) : (
+        <>
+          <div className="yoy-summary">
+            <div className="yoy-summary-block yoy-base">
+              <span className="yoy-summary-year">{baseYear} YTD</span>
+              <span className="yoy-summary-val">{baseTotal.toLocaleString()}</span>
+              <span className="yoy-summary-period">{periodLabel}</span>
+            </div>
+            <div className="yoy-summary-arrow">
+              <span className={`yoy-change-badge ${netChange > 0 ? 'positive' : netChange < 0 ? 'negative' : 'neutral'}`}>
+                {netChange > 0 ? '+' : ''}{netChange.toLocaleString()}
+                {pct !== null && <span className="yoy-pct"> ({pct > 0 ? '+' : ''}{pct}%)</span>}
+              </span>
+            </div>
+            <div className="yoy-summary-block yoy-compare">
+              <span className="yoy-summary-year">{year} YTD</span>
+              <span className="yoy-summary-val">{compareTotal.toLocaleString()}</span>
+              <span className="yoy-summary-period">{periodLabel}</span>
+            </div>
+          </div>
+
+          <div className="yoy-legend-row">
+            <span className="yoy-legend-swatch" style={{ background: '#a0aec0' }} /><span>{baseYear}</span>
+            <span className="yoy-legend-swatch" style={{ background: '#1a365d', marginLeft: 12 }} /><span>{year}</span>
+          </div>
+
+          <div className="yoy-table">
+            {rows.map(r => {
+              const rowPct = r.base > 0 ? Math.round(((r.compare - r.base) / r.base) * 100) : null;
+              const isUp = r.compare > r.base;
+              const isDown = r.compare < r.base;
+              return (
+                <div key={r.city} className="yoy-row">
+                  <div className="yoy-row-name">{r.city}</div>
+                  <div className="yoy-bars">
+                    <div className="yoy-bar-group">
+                      <div className="yoy-bar-base" style={{ width: `${(r.base / maxVal) * BAR_MAX_W}px` }} />
+                      <span className="yoy-bar-label">{r.base || ''}</span>
+                    </div>
+                    <div className="yoy-bar-group">
+                      <div className="yoy-bar-compare" style={{ width: `${(r.compare / maxVal) * BAR_MAX_W}px` }} />
+                      <span className="yoy-bar-label">{r.compare || ''}</span>
+                    </div>
+                  </div>
+                  <div className={`yoy-delta ${isUp ? 'up' : isDown ? 'down' : ''}`}>
+                    {isUp ? '+' : ''}{r.compare - r.base}
+                    {rowPct !== null && <span className="yoy-delta-pct"> ({rowPct > 0 ? '+' : ''}{rowPct}%)</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function GraphsTab({ year, month }) {
   const [cityData, setCityData] = useState([]);
   const [agencyData, setAgencyData] = useState([]);
   const [type, setType] = useState('city');
+  const [view, setView] = useState('trends');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -129,82 +228,93 @@ export default function GraphsTab({ year, month }) {
 
   return (
     <div className="graphs-tab">
-      <div className="graphs-type-toggle">
-        <button
-          className={`graphs-type-btn${type === 'city' ? ' active' : ''}`}
-          onClick={() => setType('city')}>Cities</button>
-        <button
-          className={`graphs-type-btn agency${type === 'agency' ? ' active' : ''}`}
-          onClick={() => setType('agency')}>Agencies</button>
+      <div className="graphs-view-toggle">
+        <button className={`graphs-view-btn${view === 'trends' ? ' active' : ''}`} onClick={() => setView('trends')}>
+          Trends
+        </button>
+        <button className={`graphs-view-btn${view === 'yoy' ? ' active' : ''}`} onClick={() => setView('yoy')}>
+          Year vs Year
+        </button>
       </div>
 
-      {loading ? (
-        <div className="empty-state">Loading…</div>
-      ) : data.length === 0 ? (
-        <div className="empty-state">No {type} data for {year}.</div>
+      {view === 'yoy' ? (
+        <YoyView year={year} month={month} />
       ) : (
         <>
-          <div className="graphs-summary">
-            <div className="graphs-summary-item">
-              <span className="graphs-summary-val">{yearTotal.toLocaleString()}</span>
-              <span className="graphs-summary-lbl">{year} total</span>
-            </div>
-            <div className="graphs-summary-item">
-              <span className="graphs-summary-val">{monthlyTotals[month - 1] || 0}</span>
-              <span className="graphs-summary-lbl">{SHORT[month - 1]} volume</span>
-            </div>
-            <div className="graphs-summary-item">
-              <span className="graphs-summary-val">{SHORT[peakIdx]}</span>
-              <span className="graphs-summary-lbl">peak month</span>
-            </div>
+          <div className="graphs-type-toggle">
+            <button className={`graphs-type-btn${type === 'city' ? ' active' : ''}`} onClick={() => setType('city')}>Cities</button>
+            <button className={`graphs-type-btn agency${type === 'agency' ? ' active' : ''}`} onClick={() => setType('agency')}>Agencies</button>
           </div>
 
-          <p className="stats-header" style={{ marginBottom: 4 }}>Monthly totals — {year}</p>
-          <OverallBarChart values={monthlyTotals} activeIndex={month - 1} />
-
-          {topCities.length > 1 && (
+          {loading ? (
+            <div className="empty-state">Loading…</div>
+          ) : data.length === 0 ? (
+            <div className="empty-state">No {type} data for {year}.</div>
+          ) : (
             <>
-              <p className="stats-header" style={{ marginTop: 14, marginBottom: 4 }}>
-                Top {topCities.length} — month by month
-              </p>
-              <MultiLineChart cityMonthly={cityMonthly} cities={topCities} />
-              <div className="graphs-legend">
-                {topCities.map((city, i) => (
-                  <div key={city} className="graphs-legend-item">
-                    <div className="graphs-legend-dot" style={{ background: COLORS[i % COLORS.length] }} />
-                    <span>{city}</span>
-                  </div>
-                ))}
+              <div className="graphs-summary">
+                <div className="graphs-summary-item">
+                  <span className="graphs-summary-val">{yearTotal.toLocaleString()}</span>
+                  <span className="graphs-summary-lbl">{year} total</span>
+                </div>
+                <div className="graphs-summary-item">
+                  <span className="graphs-summary-val">{monthlyTotals[month - 1] || 0}</span>
+                  <span className="graphs-summary-lbl">{SHORT[month - 1]} volume</span>
+                </div>
+                <div className="graphs-summary-item">
+                  <span className="graphs-summary-val">{SHORT[peakIdx]}</span>
+                  <span className="graphs-summary-lbl">peak month</span>
+                </div>
               </div>
+
+              <p className="stats-header" style={{ marginBottom: 4 }}>Monthly totals — {year}</p>
+              <OverallBarChart values={monthlyTotals} activeIndex={month - 1} />
+
+              {topCities.length > 1 && (
+                <>
+                  <p className="stats-header" style={{ marginTop: 14, marginBottom: 4 }}>
+                    Top {topCities.length} — month by month
+                  </p>
+                  <MultiLineChart cityMonthly={cityMonthly} cities={topCities} />
+                  <div className="graphs-legend">
+                    {topCities.map((city, i) => (
+                      <div key={city} className="graphs-legend-item">
+                        <div className="graphs-legend-dot" style={{ background: COLORS[i % COLORS.length] }} />
+                        <span>{city}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <p className="stats-header" style={{ marginTop: 14, marginBottom: 4 }}>All departments</p>
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>Dept</th>
+                    {SHORT.map(m => <th key={m}>{m}</th>)}
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topCities.map((city, ci) => (
+                    <tr key={city}>
+                      <td style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS[ci % COLORS.length], flexShrink: 0 }} />
+                        {city}
+                      </td>
+                      {cityMonthly[city].map((v, i) => (
+                        <td key={i} style={{ textAlign: 'center', background: i === month - 1 ? '#ebf8ff' : undefined }}>
+                          {v || ''}
+                        </td>
+                      ))}
+                      <td><strong>{cityTotals[city]}</strong></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </>
           )}
-
-          <p className="stats-header" style={{ marginTop: 14, marginBottom: 4 }}>All departments</p>
-          <table className="history-table">
-            <thead>
-              <tr>
-                <th>Dept</th>
-                {SHORT.map(m => <th key={m}>{m}</th>)}
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topCities.map((city, ci) => (
-                <tr key={city}>
-                  <td style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS[ci % COLORS.length], flexShrink: 0 }} />
-                    {city}
-                  </td>
-                  {cityMonthly[city].map((v, i) => (
-                    <td key={i} style={{ textAlign: 'center', background: i === month - 1 ? '#ebf8ff' : undefined }}>
-                      {v || ''}
-                    </td>
-                  ))}
-                  <td><strong>{cityTotals[city]}</strong></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </>
       )}
     </div>

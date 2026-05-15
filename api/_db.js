@@ -154,3 +154,25 @@ export async function deleteCustomCity(city) {
   await initDB();
   await sql`DELETE FROM custom_cities WHERE LOWER(city) = LOWER(${city})`;
 }
+
+export async function getYtdCompare({ throughMonth, compareYear, type = 'city' }) {
+  const sql = db();
+  await initDB();
+  const baseYear = +compareYear - 1;
+  const rows = await sql`
+    SELECT city, county, year, SUM(transport_count)::int AS total
+    FROM transports
+    WHERE year IN (${baseYear}, ${+compareYear})
+      AND month <= ${+throughMonth}
+      AND COALESCE(type, 'city') = ${type}
+    GROUP BY city, county, year
+    ORDER BY city, year
+  `;
+  const map = {};
+  for (const r of rows) {
+    if (!map[r.city]) map[r.city] = { city: r.city, county: r.county, base: 0, compare: 0 };
+    if (+r.year === baseYear) map[r.city].base = r.total;
+    else map[r.city].compare = r.total;
+  }
+  return Object.values(map).sort((a, b) => b.compare - a.compare || b.base - a.base);
+}
