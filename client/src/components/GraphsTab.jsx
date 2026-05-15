@@ -92,17 +92,18 @@ function YoyView({ year, month }) {
   const [type, setType] = useState('city');
   const [loading, setLoading] = useState(false);
   const baseYear = year - 1;
+  const throughMonth = Math.max(1, month - 1);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch(`/api/ytd-compare?compareYear=${year}&throughMonth=${month}&type=city`).then(r => r.json()),
-      fetch(`/api/ytd-compare?compareYear=${year}&throughMonth=${month}&type=agency`).then(r => r.json()),
+      fetch(`/api/ytd-compare?compareYear=${year}&throughMonth=${throughMonth}&type=city`).then(r => r.json()),
+      fetch(`/api/ytd-compare?compareYear=${year}&throughMonth=${throughMonth}&type=agency`).then(r => r.json()),
     ]).then(([city, agency]) => {
       setCityRows(city);
       setAgencyRows(agency);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [year, month]);
+  }, [year, throughMonth]);
 
   const rows = type === 'all'
     ? (() => {
@@ -123,7 +124,7 @@ function YoyView({ year, month }) {
   const maxVal = Math.max(...rows.flatMap(r => [r.base, r.compare]), 1);
   const BAR_MAX_W = 120;
 
-  const periodLabel = `Jan–${SHORT[month - 1]}`;
+  const periodLabel = `Jan–${SHORT[throughMonth - 1]}`;
 
   return (
     <div className="yoy-view">
