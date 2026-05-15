@@ -8,5 +8,6 @@ server/counties_cache.json
 .env
 .env.local
 server/.env
+client/.env
 .vercel
 .claude/

@@ -115,8 +115,8 @@ export default function App() {
           <span className="header-icon">🏥</span>
           <div>
             <h1>EMS Outreach</h1>
-            <span className="header-sub">Baylor Scott &amp; White Medical Center — Grapevine</span>
-            <span className="header-tagline">A Baylor Grapevine EMS Solution</span>
+            <span className="header-sub">{import.meta.env.VITE_HOSPITAL_NAME ?? 'Baylor Scott & White Medical Center — Grapevine'}</span>
+            <span className="header-tagline">{import.meta.env.VITE_HOSPITAL_TAGLINE ?? 'A Baylor Grapevine EMS Solution'}</span>
           </div>
         </div>
         <div className="month-selector">

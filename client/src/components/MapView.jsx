@@ -3,7 +3,11 @@ import L from 'leaflet';
 import Legend from './Legend.jsx';
 import { DFW_CITIES } from '../cityData.js';
 
-const BAYLOR_GRAPEVINE = [32.9339, -97.0783];
+const MAP_CENTER = [
+  parseFloat(import.meta.env.VITE_MAP_LAT ?? '32.9339'),
+  parseFloat(import.meta.env.VITE_MAP_LON ?? '-97.0783'),
+];
+const MAP_ZOOM = parseInt(import.meta.env.VITE_MAP_ZOOM ?? '10', 10);
 
 export function getColor(count, isYearly = false) {
   if (!count || count === 0) return '#e2e8f0';
@@ -85,7 +89,7 @@ export default function MapView({ stats, prevStats, selectedCity, onCityClick, c
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
-      <MapContainer center={BAYLOR_GRAPEVINE} zoom={10} style={{ height: '100%', width: '100%' }}>
+      <MapContainer center={MAP_CENTER} zoom={MAP_ZOOM} style={{ height: '100%', width: '100%' }}>
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'

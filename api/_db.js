@@ -27,6 +27,19 @@ export async function initDB() {
     alias TEXT PRIMARY KEY,
     canonical TEXT NOT NULL
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS hospitals (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    subtitle TEXT,
+    address TEXT,
+    lat REAL,
+    lon REAL,
+    map_zoom INTEGER DEFAULT 10,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`;
+  await sql`ALTER TABLE transports    ADD COLUMN IF NOT EXISTS hospital_id TEXT DEFAULT 'grapevine'`;
+  await sql`ALTER TABLE custom_cities ADD COLUMN IF NOT EXISTS hospital_id TEXT DEFAULT 'grapevine'`;
+  await sql`ALTER TABLE city_aliases  ADD COLUMN IF NOT EXISTS hospital_id TEXT DEFAULT 'grapevine'`;
 }
 
 export async function getAliases() {
