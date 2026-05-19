@@ -181,6 +181,7 @@ body {
   color: #fff;
 }
 .transport-meta { font-size: 12px; color: #718096; margin-top: 3px; }
+.transport-added { font-size: 11px; color: #a0aec0; margin-top: 4px; }
 .transport-meta span + span::before { content: ' · '; }
 
 .btn-delete {

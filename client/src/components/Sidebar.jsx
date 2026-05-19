@@ -601,6 +601,9 @@ function LogTab({ month, year, onDelete }) {
 }
 
 function TransportCard({ t, label, onDelete }) {
+  const added = t.created_at
+    ? new Date(t.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : null;
   return (
     <div className="transport-card">
       <div className="transport-card-header">
@@ -612,6 +615,7 @@ function TransportCard({ t, label, onDelete }) {
         </div>
         <span className="transport-count-badge">{t.transport_count}</span>
       </div>
+      {added && <div className="transport-added">Added {added}</div>}
       <button className="btn-delete" title="Remove" onClick={() => onDelete(t.id)}>×</button>
     </div>
   );
