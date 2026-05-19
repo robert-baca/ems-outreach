@@ -615,21 +615,50 @@ function LogTab({ month, year, onDelete }) {
           <button className="log-search-clear" onClick={() => { setCitySearch(''); load(logMonth, logYear, ''); }}>✕</button>
         )}
       </div>
-      {searching && (
-        <div className="log-search-banner">
-          Showing all {logYear} entries for <strong>{citySearch}</strong> — {entries.length} records
-        </div>
-      )}
       {loading ? (
         <div className="empty-state">Loading…</div>
       ) : entries.length === 0 ? (
         <div className="empty-state">
           {searching ? `No entries for "${citySearch}" in ${logYear}.` : `No entries for ${MONTHS[logMonth - 1]} ${logYear}.`}
         </div>
+      ) : searching ? (
+        // Group by month when city-searching so duplicates are obvious
+        (() => {
+          const byMonth = {};
+          entries.forEach(t => {
+            const m = t.month ?? 0;
+            if (!byMonth[m]) byMonth[m] = [];
+            byMonth[m].push(t);
+          });
+          const yearTotal = entries.reduce((s, t) => s + (t.transport_count || 0), 0);
+          return (
+            <>
+              <div className="log-city-summary">
+                <strong>{citySearch}</strong> — {logYear} total: <strong>{yearTotal}</strong> across {entries.length} records
+              </div>
+              {Object.entries(byMonth).sort((a, b) => +a[0] - +b[0]).map(([m, rows]) => {
+                const monthTotal = rows.reduce((s, t) => s + (t.transport_count || 0), 0);
+                const hasDupe = rows.length > 1;
+                return (
+                  <div key={m} className={`log-month-group${hasDupe ? ' log-month-dupe' : ''}`}>
+                    <div className="log-month-group-header">
+                      <span className="log-month-group-name">{MONTHS[+m - 1] ?? '?'}</span>
+                      <span className="log-month-group-total">{monthTotal}</span>
+                      {hasDupe && <span className="log-dupe-badge">⚠ {rows.length} entries</span>}
+                    </div>
+                    {rows.map(t => (
+                      <TransportCard key={t.id} t={t} label={t.type ?? 'city'} onDelete={handleDelete} />
+                    ))}
+                  </div>
+                );
+              })}
+            </>
+          );
+        })()
       ) : (
         <div className="transport-list">
           {entries.map(t => (
-            <TransportCard key={t.id} t={t} label={t.type ?? 'city'} onDelete={handleDelete} showMonth={searching} />
+            <TransportCard key={t.id} t={t} label={t.type ?? 'city'} onDelete={handleDelete} />
           ))}
         </div>
       )}
