@@ -199,29 +199,49 @@ function YoyView({ year, month }) {
 
 const YEAR_COLORS = ['#1a365d', '#e53e3e', '#48bb78', '#ed8936', '#805ad5'];
 
+const NOW = new Date();
+const CUR_YEAR = NOW.getFullYear();
+const CUR_MONTH = NOW.getMonth(); // 0-indexed, last COMPLETED month index
+
 function MultiYearLineChart({ yearData, years }) {
-  const allVals = years.flatMap(y => yearData[y] || []);
+  const allVals = years.flatMap((y, yi) => {
+    const vals = yearData[y] || [];
+    // only include data up to current month for current year
+    return y === CUR_YEAR ? vals.slice(0, CUR_MONTH) : vals;
+  });
   const max = Math.max(...allVals, 1);
   const W = 260, H = 110, PAD_L = 30, PAD_B = 16, PAD_T = 6;
   const xStep = (W - PAD_L) / 11;
   const yFor = v => PAD_T + H - (v / max) * H;
+  const cutX = PAD_L + CUR_MONTH * xStep;
 
   return (
     <svg viewBox={`0 0 ${W} ${H + PAD_B + PAD_T}`} style={{ width: '100%' }}>
+      {/* future months shading */}
+      {years.includes(CUR_YEAR) && (
+        <rect x={cutX} y={PAD_T} width={W - cutX} height={H} fill="#f7fafc" opacity={0.7} />
+      )}
       {[0.25, 0.5, 0.75, 1].map(f => (
         <line key={f} x1={PAD_L} x2={W} y1={yFor(max * f)} y2={yFor(max * f)} stroke="#f0f0f0" strokeWidth={1} />
       ))}
       <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={H + PAD_T} stroke="#e2e8f0" strokeWidth={1} />
       <line x1={PAD_L} y1={H + PAD_T} x2={W} y2={H + PAD_T} stroke="#e2e8f0" strokeWidth={1} />
+      {/* "today" cutoff line */}
+      {years.includes(CUR_YEAR) && (
+        <line x1={cutX} y1={PAD_T} x2={cutX} y2={H + PAD_T}
+          stroke="#a0aec0" strokeWidth={1} strokeDasharray="3 2" />
+      )}
       {years.map((y, yi) => {
         const vals = yearData[y] || Array(12).fill(0);
         const color = YEAR_COLORS[yi % YEAR_COLORS.length];
-        const pts = vals.map((v, i) => `${PAD_L + i * xStep},${yFor(v)}`).join(' ');
+        // for current year, only draw up to last completed month
+        const drawVals = y === CUR_YEAR ? vals.map((v, i) => i < CUR_MONTH ? v : 0) : vals;
+        const pts = drawVals.map((v, i) => `${PAD_L + i * xStep},${yFor(v)}`).join(' ');
         return (
           <g key={y}>
             <polyline points={pts} fill="none" stroke={color} strokeWidth={2}
               strokeLinejoin="round" strokeLinecap="round" />
-            {vals.map((v, i) => v > 0 && (
+            {drawVals.map((v, i) => v > 0 && (
               <circle key={i} cx={PAD_L + i * xStep} cy={yFor(v)} r={2.5} fill={color} />
             ))}
           </g>
@@ -229,7 +249,8 @@ function MultiYearLineChart({ yearData, years }) {
       })}
       {SHORT.map((m, i) => (
         <text key={m} x={PAD_L + i * xStep} y={H + PAD_T + 12}
-          textAnchor="middle" fontSize={7} fill="#a0aec0">{m}</text>
+          textAnchor="middle" fontSize={7}
+          fill={years.includes(CUR_YEAR) && i >= CUR_MONTH ? '#d0d0d0' : '#a0aec0'}>{m}</text>
       ))}
       <text x={PAD_L - 2} y={yFor(max)} textAnchor="end" fontSize={6.5} fill="#a0aec0">{max}</text>
       <text x={PAD_L - 2} y={yFor(max * 0.5)} textAnchor="end" fontSize={6.5} fill="#a0aec0">{Math.round(max * 0.5)}</text>
@@ -281,7 +302,13 @@ function MultiYearView() {
     );
   };
 
-  const yearTotals = years.map(y => ({ year: y, total: (yearData[y] || []).reduce((s, v) => s + v, 0) }));
+  const yearTotals = years.map(y => ({
+    year: y,
+    total: (yearData[y] || []).reduce((s, v, i) => {
+      if (y === CUR_YEAR && i >= CUR_MONTH) return s;
+      return s + v;
+    }, 0),
+  }));
 
   const delta = (a, b) => {
     if (!a || !b) return null;
@@ -334,16 +361,17 @@ function MultiYearView() {
             </thead>
             <tbody>
               {MONTHS.map((m, mi) => {
-                const vals = years.map(y => (yearData[y] || [])[mi] || 0);
+                const isFuture = (y) => y === CUR_YEAR && mi >= CUR_MONTH;
+                const vals = years.map(y => isFuture(y) ? null : ((yearData[y] || [])[mi] || 0));
                 return (
-                  <tr key={m}>
+                  <tr key={m} style={mi >= CUR_MONTH && years.includes(CUR_YEAR) ? { opacity: 0.4 } : {}}>
                     <td className="multiyear-month">{SHORT[mi]}</td>
                     {vals.map((v, i) => (
-                      <td key={i} className="multiyear-val">{v || '—'}</td>
+                      <td key={i} className="multiyear-val">{v === null ? <em style={{color:'#ccc'}}>future</em> : v || '—'}</td>
                     ))}
                     {years.length >= 2 && vals.slice(0, -1).map((v, i) => {
                       const d = delta(v, vals[i + 1]);
-                      if (!d || (v === 0 && vals[i + 1] === 0)) return <td key={i} className="multiyear-delta" />;
+                      if (!d || v === null || vals[i + 1] === null || (v === 0 && vals[i + 1] === 0)) return <td key={i} className="multiyear-delta" />;
                       return (
                         <td key={i} className={`multiyear-delta ${d.diff > 0 ? 'up' : d.diff < 0 ? 'down' : ''}`}>
                           {d.diff > 0 ? '+' : ''}{d.diff}
