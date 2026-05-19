@@ -1,55 +1,55 @@
 import { useState } from 'react';
 import { DFW_CITIES, MONTHS } from '../cityData.js';
 
-function makeRow(month, year) {
-  return { id: Math.random(), city: '', count: 1, month, year, type: 'city' };
+const SHORT = MONTHS.map(m => m.slice(0, 3));
+const now = new Date();
+
+function blankCounts() {
+  return Array(12).fill('');
 }
 
 export default function QuickEntryModal({ month, year, onClose, onSave }) {
-  const [rows, setRows] = useState(() =>
-    Array.from({ length: 6 }, () => makeRow(month, year))
-  );
+  const [city, setCity] = useState('');
+  const [type, setType] = useState('city');
+  const [entryYear, setEntryYear] = useState(year);
+  const [counts, setCounts] = useState(blankCounts);
   const [saving, setSaving] = useState(false);
-  const [savedCount, setSavedCount] = useState(null);
+  const [savedCity, setSavedCity] = useState(null);
 
-  // Global apply-to-all controls
-  const [applyMonth, setApplyMonth] = useState(month);
-  const [applyYear, setApplyYear] = useState(year);
+  const setCount = (i, val) =>
+    setCounts(prev => { const next = [...prev]; next[i] = val; return next; });
 
-  const applyToAll = () =>
-    setRows(rs => rs.map(r => ({ ...r, month: applyMonth, year: +applyYear })));
-
-  const update = (id, field, value) =>
-    setRows(rs => rs.map(r => r.id === id ? { ...r, [field]: value } : r));
-
-  const addRow = () => setRows(rs => [...rs, makeRow(applyMonth, +applyYear)]);
-  const removeRow = (id) => setRows(rs => rs.filter(r => r.id !== id));
-
-  const validRows = rows.filter(r => r.city.trim() && +r.count > 0 && r.month && r.year);
+  const filledRows = counts
+    .map((c, i) => ({ month: i + 1, count: +c }))
+    .filter(r => r.count > 0);
 
   const handleSave = async () => {
+    if (!city.trim() || filledRows.length === 0) return;
     setSaving(true);
     try {
-      await onSave(validRows);
-      setSavedCount(validRows.length);
+      await onSave(filledRows.map(r => ({
+        city: city.trim(), count: r.count,
+        month: r.month, year: +entryYear, type,
+      })));
+      setSavedCity(city.trim());
+      setCity('');
+      setCounts(blankCounts());
     } finally {
       setSaving(false);
     }
   };
 
-  if (savedCount !== null) {
-    return (
-      <div className="modal-overlay">
-        <div className="modal" style={{ maxWidth: 380, textAlign: 'center', padding: '40px 30px' }}>
-          <div style={{ fontSize: 48 }}>✅</div>
-          <p style={{ fontWeight: 700, fontSize: 18, marginTop: 12 }}>
-            {savedCount} record{savedCount !== 1 ? 's' : ''} saved
-          </p>
-          <button className="btn-import" style={{ marginTop: 20 }} onClick={onClose}>Done</button>
-        </div>
-      </div>
-    );
-  }
+  const handleKeyDown = (e, i) => {
+    if (e.key === 'Enter' || e.key === 'Tab') return;
+    if (e.key === 'ArrowRight' && i < 11) {
+      e.preventDefault();
+      document.getElementById(`qe-m-${i + 1}`)?.focus();
+    }
+    if (e.key === 'ArrowLeft' && i > 0) {
+      e.preventDefault();
+      document.getElementById(`qe-m-${i - 1}`)?.focus();
+    }
+  };
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -59,109 +59,74 @@ export default function QuickEntryModal({ month, year, onClose, onSave }) {
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
-        <div className="qe-apply-bar">
-          <span className="qe-apply-label">Set all rows to:</span>
-          <select
-            className="qe-apply-select"
-            value={applyMonth}
-            onChange={e => setApplyMonth(+e.target.value)}
-          >
-            {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-          </select>
-          <input
-            type="number" min={2020} max={2099}
-            className="qe-apply-year"
-            value={applyYear}
-            onChange={e => setApplyYear(e.target.value)}
-          />
-          <button className="qe-apply-btn" onClick={applyToAll}>Apply to all ↓</button>
-        </div>
+        <div className="qe-body">
+          {savedCity && (
+            <div className="qe-saved-notice">✓ Saved {savedCity} — enter another city or close</div>
+          )}
 
-        <div className="qe-table-wrap">
-          <table className="qe-table">
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>City / Agency Name</th>
-                <th>Count</th>
-                <th>Month</th>
-                <th>Year</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr key={row.id}>
-                  <td>
-                    <select
-                      className="qe-type"
-                      value={row.type}
-                      onChange={e => update(row.id, 'type', e.target.value)}
-                    >
-                      <option value="city">City</option>
-                      <option value="agency">Agency</option>
-                    </select>
-                  </td>
-                  <td>
-                    <input
-                      list="qe-city-list"
-                      className="qe-city"
-                      value={row.city}
-                      onChange={e => update(row.id, 'city', e.target.value)}
-                      placeholder={row.type === 'agency' ? 'Agency name…' : 'City name…'}
-                      autoFocus={i === 0}
-                      autoComplete="off"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number" min={1} max={999}
-                      className="qe-count"
-                      value={row.count}
-                      onChange={e => update(row.id, 'count', e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <select
-                      className="qe-month"
-                      value={row.month}
-                      onChange={e => update(row.id, 'month', +e.target.value)}
-                    >
-                      {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m.slice(0, 3)}</option>)}
-                    </select>
-                  </td>
-                  <td>
-                    <input
-                      type="number" min={2020} max={2099}
-                      className="qe-year"
-                      value={row.year}
-                      onChange={e => update(row.id, 'year', e.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <button className="qe-remove" onClick={() => removeRow(row.id)} tabIndex={-1}>×</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <datalist id="qe-city-list">
-            {DFW_CITIES.map(({ city }) => <option key={city} value={city} />)}
-          </datalist>
-        </div>
-
-        <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
-          <button className="btn-add-row" onClick={addRow}>+ Add row</button>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn-cancel" onClick={onClose}>Cancel</button>
-            <button
-              className="btn-import"
-              disabled={validRows.length === 0 || saving}
-              onClick={handleSave}
-            >
-              {saving ? 'Saving…' : `Save ${validRows.length} row${validRows.length !== 1 ? 's' : ''}`}
-            </button>
+          <div className="qe-top-row">
+            <div className="qe-field">
+              <label>Type</label>
+              <select value={type} onChange={e => setType(e.target.value)} className="qe-select">
+                <option value="city">City</option>
+                <option value="agency">Agency</option>
+              </select>
+            </div>
+            <div className="qe-field qe-field-city">
+              <label>City / Agency Name</label>
+              <input
+                list="qe-city-list"
+                className="qe-city-input"
+                value={city}
+                onChange={e => setCity(e.target.value)}
+                placeholder={type === 'agency' ? 'Agency name…' : 'City name…'}
+                autoFocus
+                autoComplete="off"
+              />
+              <datalist id="qe-city-list">
+                {DFW_CITIES.map(({ city }) => <option key={city} value={city} />)}
+              </datalist>
+            </div>
+            <div className="qe-field">
+              <label>Year</label>
+              <input
+                type="number" min={2020} max={2099}
+                className="qe-year-input"
+                value={entryYear}
+                onChange={e => setEntryYear(e.target.value)}
+              />
+            </div>
           </div>
+
+          <div className="qe-months-grid">
+            {SHORT.map((m, i) => (
+              <div key={m} className="qe-month-cell">
+                <label className={`qe-month-label${i === month - 1 && +entryYear === year ? ' current' : ''}`}>
+                  {m}
+                </label>
+                <input
+                  id={`qe-m-${i}`}
+                  type="number" min={0} max={9999}
+                  className="qe-month-input"
+                  value={counts[i]}
+                  placeholder="—"
+                  onChange={e => setCount(i, e.target.value)}
+                  onKeyDown={e => handleKeyDown(e, i)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="modal-footer" style={{ justifyContent: 'flex-end', gap: 10 }}>
+          <button className="btn-cancel" onClick={onClose}>Close</button>
+          <button
+            className="btn-import"
+            disabled={!city.trim() || filledRows.length === 0 || saving}
+            onClick={handleSave}
+          >
+            {saving ? 'Saving…' : `Save ${filledRows.length} month${filledRows.length !== 1 ? 's' : ''}`}
+          </button>
         </div>
       </div>
     </div>
