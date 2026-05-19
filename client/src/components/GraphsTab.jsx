@@ -197,6 +197,177 @@ function YoyView({ year, month }) {
   );
 }
 
+const YEAR_COLORS = ['#1a365d', '#e53e3e', '#48bb78', '#ed8936', '#805ad5'];
+
+function MultiYearLineChart({ yearData, years }) {
+  const allVals = years.flatMap(y => yearData[y] || []);
+  const max = Math.max(...allVals, 1);
+  const W = 260, H = 110, PAD_L = 30, PAD_B = 16, PAD_T = 6;
+  const xStep = (W - PAD_L) / 11;
+  const yFor = v => PAD_T + H - (v / max) * H;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H + PAD_B + PAD_T}`} style={{ width: '100%' }}>
+      {[0.25, 0.5, 0.75, 1].map(f => (
+        <line key={f} x1={PAD_L} x2={W} y1={yFor(max * f)} y2={yFor(max * f)} stroke="#f0f0f0" strokeWidth={1} />
+      ))}
+      <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={H + PAD_T} stroke="#e2e8f0" strokeWidth={1} />
+      <line x1={PAD_L} y1={H + PAD_T} x2={W} y2={H + PAD_T} stroke="#e2e8f0" strokeWidth={1} />
+      {years.map((y, yi) => {
+        const vals = yearData[y] || Array(12).fill(0);
+        const color = YEAR_COLORS[yi % YEAR_COLORS.length];
+        const pts = vals.map((v, i) => `${PAD_L + i * xStep},${yFor(v)}`).join(' ');
+        return (
+          <g key={y}>
+            <polyline points={pts} fill="none" stroke={color} strokeWidth={2}
+              strokeLinejoin="round" strokeLinecap="round" />
+            {vals.map((v, i) => v > 0 && (
+              <circle key={i} cx={PAD_L + i * xStep} cy={yFor(v)} r={2.5} fill={color} />
+            ))}
+          </g>
+        );
+      })}
+      {SHORT.map((m, i) => (
+        <text key={m} x={PAD_L + i * xStep} y={H + PAD_T + 12}
+          textAnchor="middle" fontSize={7} fill="#a0aec0">{m}</text>
+      ))}
+      <text x={PAD_L - 2} y={yFor(max)} textAnchor="end" fontSize={6.5} fill="#a0aec0">{max}</text>
+      <text x={PAD_L - 2} y={yFor(max * 0.5)} textAnchor="end" fontSize={6.5} fill="#a0aec0">{Math.round(max * 0.5)}</text>
+    </svg>
+  );
+}
+
+function MultiYearView() {
+  const currentYear = new Date().getFullYear();
+  const [years, setYears] = useState([currentYear - 2, currentYear - 1, currentYear]);
+  const [type, setType] = useState('city');
+  const [yearData, setYearData] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all(
+      years.map(y =>
+        apiFetch(`/api/trends?year=${y}&type=${type}`)
+          .then(r => r.json())
+          .then(rows => {
+            const monthly = Array(12).fill(0);
+            rows.forEach(r => { if (r.month >= 1 && r.month <= 12) monthly[r.month - 1] += r.total; });
+            return [y, monthly];
+          })
+      )
+    ).then(results => {
+      const d = {};
+      results.forEach(([y, m]) => { d[y] = m; });
+      setYearData(d);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [years, type]);
+
+  const toggleYear = (y) => {
+    setYears(prev =>
+      prev.includes(y) ? (prev.length > 1 ? prev.filter(x => x !== y) : prev)
+                       : [...prev, y].sort()
+    );
+  };
+
+  const yearTotals = years.map(y => ({ year: y, total: (yearData[y] || []).reduce((s, v) => s + v, 0) }));
+
+  const delta = (a, b) => {
+    if (!a || !b) return null;
+    const diff = b - a;
+    const pct = a > 0 ? Math.round((diff / a) * 100) : null;
+    return { diff, pct };
+  };
+
+  return (
+    <div className="multiyear-view">
+      <div className="graphs-type-toggle" style={{ marginBottom: 8 }}>
+        <button className={`graphs-type-btn${type === 'city' ? ' active' : ''}`} onClick={() => setType('city')}>Cities</button>
+        <button className={`graphs-type-btn agency${type === 'agency' ? ' active' : ''}`} onClick={() => setType('agency')}>Agencies</button>
+        <button className={`graphs-type-btn${type === 'all' ? ' active' : ''}`} onClick={() => setType('all')}>All</button>
+      </div>
+
+      <div className="multiyear-year-picker">
+        {Array.from({ length: 7 }, (_, i) => currentYear - 3 + i).map(y => (
+          <button
+            key={y}
+            className={`multiyear-year-btn${years.includes(y) ? ' active' : ''}`}
+            style={years.includes(y) ? { background: YEAR_COLORS[years.indexOf(y) % YEAR_COLORS.length], borderColor: YEAR_COLORS[years.indexOf(y) % YEAR_COLORS.length] } : {}}
+            onClick={() => toggleYear(y)}
+          >{y}</button>
+        ))}
+      </div>
+
+      {loading ? <div className="empty-state">Loading…</div> : (
+        <>
+          <div className="multiyear-legend">
+            {years.map((y, i) => (
+              <span key={y} className="multiyear-legend-item">
+                <span className="multiyear-legend-dot" style={{ background: YEAR_COLORS[i % YEAR_COLORS.length] }} />
+                {y}: <strong>{(yearData[y] || []).reduce((s, v) => s + v, 0).toLocaleString()}</strong>
+              </span>
+            ))}
+          </div>
+
+          <MultiYearLineChart yearData={yearData} years={years} />
+
+          <table className="multiyear-table">
+            <thead>
+              <tr>
+                <th>Month</th>
+                {years.map(y => <th key={y} style={{ color: YEAR_COLORS[years.indexOf(y) % YEAR_COLORS.length] }}>{y}</th>)}
+                {years.length >= 2 && years.slice(0, -1).map((y, i) => (
+                  <th key={`d${y}`} className="multiyear-delta-head">{y}→{years[i + 1]}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {MONTHS.map((m, mi) => {
+                const vals = years.map(y => (yearData[y] || [])[mi] || 0);
+                return (
+                  <tr key={m}>
+                    <td className="multiyear-month">{SHORT[mi]}</td>
+                    {vals.map((v, i) => (
+                      <td key={i} className="multiyear-val">{v || '—'}</td>
+                    ))}
+                    {years.length >= 2 && vals.slice(0, -1).map((v, i) => {
+                      const d = delta(v, vals[i + 1]);
+                      if (!d || (v === 0 && vals[i + 1] === 0)) return <td key={i} className="multiyear-delta" />;
+                      return (
+                        <td key={i} className={`multiyear-delta ${d.diff > 0 ? 'up' : d.diff < 0 ? 'down' : ''}`}>
+                          {d.diff > 0 ? '+' : ''}{d.diff}
+                          {d.pct !== null && <span className="multiyear-delta-pct"> ({d.pct > 0 ? '+' : ''}{d.pct}%)</span>}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+              <tr className="multiyear-total-row">
+                <td>Total</td>
+                {yearTotals.map(({ year: y, total }) => (
+                  <td key={y} className="multiyear-val"><strong>{total.toLocaleString()}</strong></td>
+                ))}
+                {years.length >= 2 && yearTotals.slice(0, -1).map(({ total: a }, i) => {
+                  const b = yearTotals[i + 1].total;
+                  const d = delta(a, b);
+                  if (!d) return <td key={i} />;
+                  return (
+                    <td key={i} className={`multiyear-delta ${d.diff > 0 ? 'up' : d.diff < 0 ? 'down' : ''}`}>
+                      <strong>{d.diff > 0 ? '+' : ''}{d.diff.toLocaleString()}</strong>
+                      {d.pct !== null && <span className="multiyear-delta-pct"> ({d.pct > 0 ? '+' : ''}{d.pct}%)</span>}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function GraphsTab({ year, month }) {
   const [cityData, setCityData] = useState([]);
   const [agencyData, setAgencyData] = useState([]);
@@ -255,10 +426,15 @@ export default function GraphsTab({ year, month }) {
         <button className={`graphs-view-btn${view === 'yoy' ? ' active' : ''}`} onClick={() => setView('yoy')}>
           Year vs Year
         </button>
+        <button className={`graphs-view-btn${view === 'multiyear' ? ' active' : ''}`} onClick={() => setView('multiyear')}>
+          Multi-Year
+        </button>
       </div>
 
       {view === 'yoy' ? (
         <YoyView year={year} month={month} />
+      ) : view === 'multiyear' ? (
+        <MultiYearView />
       ) : (
         <>
           <div className="graphs-type-toggle">
