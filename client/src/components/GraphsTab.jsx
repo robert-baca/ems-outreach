@@ -244,23 +244,34 @@ function MultiYearView() {
   const [yearData, setYearData] = useState({});
   const [loading, setLoading] = useState(false);
 
+  const fetchYear = (y, t) => {
+    if (t === 'all') {
+      return Promise.all([
+        apiFetch(`/api/trends?year=${y}&type=city`).then(r => r.json()),
+        apiFetch(`/api/trends?year=${y}&type=agency`).then(r => r.json()),
+      ]).then(([city, agency]) => {
+        const monthly = Array(12).fill(0);
+        [...city, ...agency].forEach(r => { if (r.month >= 1 && r.month <= 12) monthly[r.month - 1] += r.total; });
+        return [y, monthly];
+      });
+    }
+    return apiFetch(`/api/trends?year=${y}&type=${t}`)
+      .then(r => r.json())
+      .then(rows => {
+        const monthly = Array(12).fill(0);
+        rows.forEach(r => { if (r.month >= 1 && r.month <= 12) monthly[r.month - 1] += r.total; });
+        return [y, monthly];
+      });
+  };
+
   useEffect(() => {
     setLoading(true);
-    Promise.all(
-      years.map(y =>
-        apiFetch(`/api/trends?year=${y}&type=${type}`)
-          .then(r => r.json())
-          .then(rows => {
-            const monthly = Array(12).fill(0);
-            rows.forEach(r => { if (r.month >= 1 && r.month <= 12) monthly[r.month - 1] += r.total; });
-            return [y, monthly];
-          })
-      )
-    ).then(results => {
-      const d = {};
-      results.forEach(([y, m]) => { d[y] = m; });
-      setYearData(d);
-    }).catch(() => {}).finally(() => setLoading(false));
+    Promise.all(years.map(y => fetchYear(y, type)))
+      .then(results => {
+        const d = {};
+        results.forEach(([y, m]) => { d[y] = m; });
+        setYearData(d);
+      }).catch(() => {}).finally(() => setLoading(false));
   }, [years, type]);
 
   const toggleYear = (y) => {
