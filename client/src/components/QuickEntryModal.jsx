@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { DFW_CITIES, MONTHS } from '../cityData.js';
 
-const now = new Date();
-
 function makeRow(month, year) {
   return { id: Math.random(), city: '', count: 1, month, year, type: 'city' };
 }
@@ -14,10 +12,17 @@ export default function QuickEntryModal({ month, year, onClose, onSave }) {
   const [saving, setSaving] = useState(false);
   const [savedCount, setSavedCount] = useState(null);
 
+  // Global apply-to-all controls
+  const [applyMonth, setApplyMonth] = useState(month);
+  const [applyYear, setApplyYear] = useState(year);
+
+  const applyToAll = () =>
+    setRows(rs => rs.map(r => ({ ...r, month: applyMonth, year: +applyYear })));
+
   const update = (id, field, value) =>
     setRows(rs => rs.map(r => r.id === id ? { ...r, [field]: value } : r));
 
-  const addRow = () => setRows(rs => [...rs, makeRow(month, year)]);
+  const addRow = () => setRows(rs => [...rs, makeRow(applyMonth, +applyYear)]);
   const removeRow = (id) => setRows(rs => rs.filter(r => r.id !== id));
 
   const validRows = rows.filter(r => r.city.trim() && +r.count > 0 && r.month && r.year);
@@ -52,6 +57,24 @@ export default function QuickEntryModal({ month, year, onClose, onSave }) {
         <div className="modal-header">
           <h2>Quick Entry</h2>
           <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+
+        <div className="qe-apply-bar">
+          <span className="qe-apply-label">Set all rows to:</span>
+          <select
+            className="qe-apply-select"
+            value={applyMonth}
+            onChange={e => setApplyMonth(+e.target.value)}
+          >
+            {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+          </select>
+          <input
+            type="number" min={2020} max={2099}
+            className="qe-apply-year"
+            value={applyYear}
+            onChange={e => setApplyYear(e.target.value)}
+          />
+          <button className="qe-apply-btn" onClick={applyToAll}>Apply to all ↓</button>
         </div>
 
         <div className="qe-table-wrap">
@@ -116,11 +139,7 @@ export default function QuickEntryModal({ month, year, onClose, onSave }) {
                     />
                   </td>
                   <td>
-                    <button
-                      className="qe-remove"
-                      onClick={() => removeRow(row.id)}
-                      tabIndex={-1}
-                    >×</button>
+                    <button className="qe-remove" onClick={() => removeRow(row.id)} tabIndex={-1}>×</button>
                   </td>
                 </tr>
               ))}

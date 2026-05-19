@@ -587,6 +587,41 @@ body {
 
 /* ── Quick Entry Modal ── */
 .qe-modal { max-width: 720px; }
+.qe-apply-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px; background: #ebf8ff; border-bottom: 1px solid #bee3f8;
+  flex-shrink: 0;
+}
+.qe-apply-label { font-size: 12px; font-weight: 600; color: #2b6cb0; white-space: nowrap; }
+.qe-apply-select {
+  border: 1px solid #bee3f8; border-radius: 5px; padding: 4px 8px;
+  font-size: 13px; background: #fff; outline: none;
+}
+.qe-apply-year {
+  border: 1px solid #bee3f8; border-radius: 5px; padding: 4px 8px;
+  font-size: 13px; width: 72px; background: #fff; outline: none;
+}
+.qe-apply-btn {
+  background: #1a365d; color: #fff; border: none; border-radius: 5px;
+  padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+  white-space: nowrap; transition: background .15s;
+}
+.qe-apply-btn:hover { background: #2a4a7f; }
+
+/* ── Log Tab ── */
+.log-controls {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 0;
+  border-bottom: 1px solid #e2e8f0; flex-shrink: 0;
+}
+.log-select {
+  border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 8px;
+  font-size: 13px; background: #fff; outline: none; flex: 1;
+}
+.log-year-input {
+  border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 8px;
+  font-size: 13px; width: 72px; background: #fff; outline: none;
+}
+.log-count { font-size: 12px; color: #a0aec0; white-space: nowrap; margin-left: auto; }
 .qe-table-wrap { overflow-x: auto; flex: 1; }
 .qe-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .qe-table th {

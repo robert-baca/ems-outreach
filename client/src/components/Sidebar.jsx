@@ -253,19 +253,7 @@ export default function Sidebar({
         })()}
 
         {tab === 'list' && (
-          <>
-            <p className="stats-header" style={{ marginBottom: 12 }}>
-              {MONTHS[month - 1]} {year} — all entries ({transports.length + agencyTransports.length})
-            </p>
-            {(transports.length + agencyTransports.length) === 0 ? (
-              <div className="empty-state">No entries yet this month.</div>
-            ) : (
-              <div className="transport-list">
-                {transports.map(t => <TransportCard key={t.id} t={t} label="city" onDelete={onDelete} />)}
-                {agencyTransports.map(t => <TransportCard key={t.id} t={t} label="agency" onDelete={onDelete} />)}
-              </div>
-            )}
-          </>
+          <LogTab month={month} year={year} onDelete={onDelete} />
         )}
 
         {tab === 'graphs' && (
@@ -557,6 +545,58 @@ function CityDetail({ city, history, month, year, onBack, coords, isCustom, onPi
         )}
       </div>
     </div>
+  );
+}
+
+function LogTab({ month, year, onDelete }) {
+  const [logMonth, setLogMonth] = useState(month);
+  const [logYear, setLogYear] = useState(year);
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = (m, y) => {
+    setLoading(true);
+    Promise.all([
+      apiFetch(`/api/transports?month=${m}&year=${y}&type=city`).then(r => r.json()),
+      apiFetch(`/api/transports?month=${m}&year=${y}&type=agency`).then(r => r.json()),
+    ]).then(([city, agency]) => setEntries([...city, ...agency]))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(logMonth, logYear); }, [logMonth, logYear]);
+
+  const handleDelete = async (id) => {
+    await onDelete(id);
+    setEntries(prev => prev.filter(e => e.id !== id));
+  };
+
+  return (
+    <>
+      <div className="log-controls">
+        <select className="log-select" value={logMonth} onChange={e => setLogMonth(+e.target.value)}>
+          {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+        </select>
+        <input
+          type="number" min={2020} max={2099}
+          className="log-year-input"
+          value={logYear}
+          onChange={e => setLogYear(+e.target.value)}
+        />
+        <span className="log-count">{entries.length} entries</span>
+      </div>
+      {loading ? (
+        <div className="empty-state">Loading…</div>
+      ) : entries.length === 0 ? (
+        <div className="empty-state">No entries for {MONTHS[logMonth - 1]} {logYear}.</div>
+      ) : (
+        <div className="transport-list">
+          {entries.map(t => (
+            <TransportCard key={t.id} t={t} label={t.type ?? 'city'} onDelete={handleDelete} />
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
