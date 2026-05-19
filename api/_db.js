@@ -82,9 +82,19 @@ export async function deleteAlias(alias, hospitalId = 'grapevine') {
   await sql`DELETE FROM city_aliases WHERE LOWER(alias) = LOWER(${alias}) AND hospital_id = ${hospitalId}`;
 }
 
-export async function getTransports({ month, year, type = 'city' }, hospitalId = 'grapevine') {
+export async function getTransports({ month, year, type = 'city', city }, hospitalId = 'grapevine') {
   const sql = db();
   await initDB();
+  // city search: return all entries for that city across the full year
+  if (city) {
+    return sql`
+      SELECT * FROM transports
+      WHERE year = ${+year}
+        AND LOWER(city) = LOWER(${city})
+        AND hospital_id = ${hospitalId}
+      ORDER BY month ASC, created_at ASC
+    `;
+  }
   return sql`
     SELECT * FROM transports
     WHERE month = ${+month} AND year = ${+year}

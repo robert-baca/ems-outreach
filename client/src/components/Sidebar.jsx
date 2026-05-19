@@ -551,32 +551,51 @@ function CityDetail({ city, history, month, year, onBack, coords, isCustom, onPi
 function LogTab({ month, year, onDelete }) {
   const [logMonth, setLogMonth] = useState(month);
   const [logYear, setLogYear] = useState(year);
+  const [citySearch, setCitySearch] = useState('');
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const load = (m, y) => {
+  const load = (m, y, city) => {
     setLoading(true);
-    Promise.all([
-      apiFetch(`/api/transports?month=${m}&year=${y}&type=city`).then(r => r.json()),
-      apiFetch(`/api/transports?month=${m}&year=${y}&type=agency`).then(r => r.json()),
-    ]).then(([city, agency]) => setEntries([...city, ...agency]))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    if (city) {
+      apiFetch(`/api/transports?year=${y}&city=${encodeURIComponent(city)}`)
+        .then(r => r.json())
+        .then(rows => setEntries(rows))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else {
+      Promise.all([
+        apiFetch(`/api/transports?month=${m}&year=${y}&type=city`).then(r => r.json()),
+        apiFetch(`/api/transports?month=${m}&year=${y}&type=agency`).then(r => r.json()),
+      ]).then(([city, agency]) => setEntries([...city, ...agency]))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
   };
 
-  useEffect(() => { load(logMonth, logYear); }, [logMonth, logYear]);
+  useEffect(() => { load(logMonth, logYear, ''); setCitySearch(''); }, [logMonth, logYear]);
+
+  const handleCitySearch = (val) => {
+    setCitySearch(val);
+    if (val.trim().length >= 2) load(logMonth, logYear, val.trim());
+    else if (val === '') load(logMonth, logYear, '');
+  };
 
   const handleDelete = async (id) => {
     await onDelete(id);
     setEntries(prev => prev.filter(e => e.id !== id));
   };
 
+  const searching = citySearch.trim().length >= 2;
+
   return (
     <>
       <div className="log-controls">
-        <select className="log-select" value={logMonth} onChange={e => setLogMonth(+e.target.value)}>
-          {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-        </select>
+        {!searching && (
+          <select className="log-select" value={logMonth} onChange={e => setLogMonth(+e.target.value)}>
+            {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+          </select>
+        )}
         <input
           type="number" min={2020} max={2099}
           className="log-year-input"
@@ -585,14 +604,32 @@ function LogTab({ month, year, onDelete }) {
         />
         <span className="log-count">{entries.length} entries</span>
       </div>
+      <div className="log-search-row">
+        <input
+          className="log-search"
+          placeholder="Search city to see all year entries…"
+          value={citySearch}
+          onChange={e => handleCitySearch(e.target.value)}
+        />
+        {citySearch && (
+          <button className="log-search-clear" onClick={() => { setCitySearch(''); load(logMonth, logYear, ''); }}>✕</button>
+        )}
+      </div>
+      {searching && (
+        <div className="log-search-banner">
+          Showing all {logYear} entries for <strong>{citySearch}</strong> — {entries.length} records
+        </div>
+      )}
       {loading ? (
         <div className="empty-state">Loading…</div>
       ) : entries.length === 0 ? (
-        <div className="empty-state">No entries for {MONTHS[logMonth - 1]} {logYear}.</div>
+        <div className="empty-state">
+          {searching ? `No entries for "${citySearch}" in ${logYear}.` : `No entries for ${MONTHS[logMonth - 1]} ${logYear}.`}
+        </div>
       ) : (
         <div className="transport-list">
           {entries.map(t => (
-            <TransportCard key={t.id} t={t} label={t.type ?? 'city'} onDelete={handleDelete} />
+            <TransportCard key={t.id} t={t} label={t.type ?? 'city'} onDelete={handleDelete} showMonth={searching} />
           ))}
         </div>
       )}
@@ -600,7 +637,7 @@ function LogTab({ month, year, onDelete }) {
   );
 }
 
-function TransportCard({ t, label, onDelete }) {
+function TransportCard({ t, label, onDelete, showMonth = false }) {
   const added = t.created_at
     ? new Date(t.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
     : null;
@@ -609,6 +646,9 @@ function TransportCard({ t, label, onDelete }) {
       <div className="transport-card-header">
         <div>
           <span className="transport-city">{t.city}</span>
+          {showMonth && t.month && (
+            <span className="transport-month-badge">{MONTHS[t.month - 1]}</span>
+          )}
           <span className="transport-type-badge" style={{ background: label === 'agency' ? '#667eea' : '#1a365d' }}>
             {label}
           </span>
