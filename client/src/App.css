@@ -508,12 +508,30 @@ body {
   border-left: 3px solid #bee3f8;
 }
 .template-hint code { font-family: monospace; font-size: 11px; color: #2b6cb0; }
+.template-download-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap;
+}
+.template-year-input {
+  border: 1px solid #bee3f8; border-radius: 5px; padding: 4px 8px;
+  font-size: 13px; width: 72px; background: #fff; outline: none;
+}
 .btn-template {
-  margin-top: 6px; background: none; border: 1px solid #bee3f8;
+  background: none; border: 1px solid #bee3f8;
   color: #2b6cb0; font-size: 12px; font-weight: 600;
   padding: 4px 10px; border-radius: 5px; cursor: pointer;
 }
 .btn-template:hover { background: #bee3f8; }
+.import-year-override {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: #fffbeb; border: 1px solid #f6e05e; border-radius: 6px;
+  padding: 8px 12px; font-size: 12px;
+}
+.import-year-override label { font-weight: 600; color: #744210; white-space: nowrap; }
+.import-year-clear {
+  background: none; border: none; color: #a0aec0; cursor: pointer; font-size: 12px; padding: 2px 4px;
+}
+.import-year-clear:hover { color: #e53e3e; }
+.import-year-hint { color: #718096; font-style: italic; }
 
 /* Preview table */
 .preview-wrap { overflow-x: auto; border-radius: 6px; border: 1px solid #e2e8f0; }

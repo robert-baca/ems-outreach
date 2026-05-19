@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { DFW_CITIES, MONTHS } from '../cityData.js';
+import { apiFetch } from '../api.js';
 
 const KNOWN = new Set(DFW_CITIES.map(c => c.city.toLowerCase()));
 
@@ -89,8 +90,7 @@ function parseTallFormat(ws) {
 
 // ── Template download — matches your current sheet format ──
 
-function downloadTemplate() {
-  const year = new Date().getFullYear();
+function downloadTemplate(year) {
   const header1 = ['EMS AGENCY', `FY${year}`, '', '', '', '', '', '', '', '', '', '', ''];
   const header2 = ['', 'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const samples = [
@@ -102,7 +102,6 @@ function downloadTemplate() {
   ];
 
   const ws = XLSX.utils.aoa_to_sheet([header1, header2, ...samples]);
-  // Merge A1:B1 for the "EMS AGENCY / FY YEAR" header look
   ws['!merges'] = [{ s: { r: 0, c: 1 }, e: { r: 0, c: 12 } }];
   ws['!cols'] = [{ wch: 22 }, ...Array(12).fill({ wch: 6 })];
 
@@ -114,11 +113,13 @@ function downloadTemplate() {
 // ── Component ──
 
 export default function ImportModal({ customCities, onClose, onSuccess }) {
-  const [rows, setRows]       = useState([]);
+  const [rows, setRows]         = useState([]);
   const [dragging, setDragging] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [result, setResult]   = useState(null);
+  const [result, setResult]     = useState(null);
   const [formatUsed, setFormatUsed] = useState('');
+  const [templateYear, setTemplateYear] = useState(new Date().getFullYear());
+  const [yearOverride, setYearOverride] = useState('');
   const fileRef = useRef();
 
   const allKnown = new Set([
@@ -147,8 +148,12 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
     reader.readAsArrayBuffer(file);
   }
 
-  const validRows = rows.filter(r => r.errors.length === 0);
-  const cityRows  = validRows.filter(r => r.type === 'city');
+  const overrideYear = yearOverride !== '' ? +yearOverride : null;
+  const displayRows = overrideYear
+    ? rows.map(r => ({ ...r, year: overrideYear, errors: r.errors.filter(e => e !== 'invalid year') }))
+    : rows;
+  const validRows  = displayRows.filter(r => r.errors.length === 0);
+  const cityRows   = validRows.filter(r => r.type === 'city');
   const agencyRows = validRows.filter(r => r.type === 'agency');
   const newCities = [...new Set(
     cityRows.filter(r => !allKnown.has(r.city.toLowerCase())).map(r => r.city)
@@ -163,7 +168,7 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
         month: r.month, year: r.year,
         type: r.type,
       }));
-      const resp = await fetch('/api/import', {
+      const resp = await apiFetch('/api/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ records, newCities }),
@@ -185,13 +190,21 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
 
         <div className="modal-body">
           <div className="template-hint">
-            <strong>Supports your current format</strong> — agency names in rows, months (Jan–Dec) across the top, year in the tab name (e.g. FY2026).
+            <strong>Supports your current format</strong> — agency names in rows, months (Jan–Dec) across the top.
             <br />
             Known DFW cities map as city pins · Everything else (CAREFLITE, ACADIAN, etc.) goes to the Agencies tab.
             <br />
-            <button className="btn-template" onClick={downloadTemplate}>
-              ⬇ Download template (.xlsx)
-            </button>
+            <div className="template-download-row">
+              <input
+                type="number" min={2020} max={2099}
+                className="template-year-input"
+                value={templateYear}
+                onChange={e => setTemplateYear(+e.target.value)}
+              />
+              <button className="btn-template" onClick={() => downloadTemplate(templateYear)}>
+                ⬇ Download {templateYear} template (.xlsx)
+              </button>
+            </div>
           </div>
 
           {rows.length === 0 && (
@@ -216,6 +229,23 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
 
           {rows.length > 0 && !result && (
             <>
+              <div className="import-year-override">
+                <label>Override year for all rows:</label>
+                <input
+                  type="number" min={2020} max={2099}
+                  className="template-year-input"
+                  value={yearOverride}
+                  placeholder={String(rows[0]?.year || new Date().getFullYear())}
+                  onChange={e => setYearOverride(e.target.value)}
+                />
+                {yearOverride && (
+                  <button className="import-year-clear" onClick={() => setYearOverride('')}>✕ Clear</button>
+                )}
+                <span className="import-year-hint">
+                  {yearOverride ? `All rows → ${yearOverride}` : 'Leave blank to use year from file'}
+                </span>
+              </div>
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <p style={{ fontSize: 13, color: '#4a5568' }}>
                   <strong>{validRows.length}</strong> records
@@ -227,7 +257,7 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
                   )}
                 </p>
                 <button className="btn-cancel" style={{ fontSize: 12, padding: '4px 10px' }}
-                  onClick={() => { setRows([]); fileRef.current.value = ''; }}>
+                  onClick={() => { setRows([]); setYearOverride(''); fileRef.current.value = ''; }}>
                   Clear
                 </button>
               </div>
@@ -238,7 +268,7 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
                     <tr><th>Name</th><th>Count</th><th>Month</th><th>Year</th><th>Type</th></tr>
                   </thead>
                   <tbody>
-                    {rows.map((r, i) => (
+                    {displayRows.map((r, i) => (
                       <tr key={i} style={{ opacity: r.errors.length ? 0.4 : 1 }}>
                         <td>{r.city || '—'}</td>
                         <td>{r.count}</td>
