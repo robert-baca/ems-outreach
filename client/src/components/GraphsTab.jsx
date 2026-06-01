@@ -201,13 +201,12 @@ const YEAR_COLORS = ['#1a365d', '#e53e3e', '#48bb78', '#ed8936', '#805ad5'];
 
 const NOW = new Date();
 const CUR_YEAR = NOW.getFullYear();
-const CUR_MONTH = NOW.getMonth(); // 0-indexed, last COMPLETED month index
+const CUR_MONTH = NOW.getMonth(); // 0-indexed current month; months > this are future
 
 function MultiYearLineChart({ yearData, years }) {
   const allVals = years.flatMap((y, yi) => {
     const vals = yearData[y] || [];
-    // only include data up to current month for current year
-    return y === CUR_YEAR ? vals.slice(0, CUR_MONTH) : vals;
+    return y === CUR_YEAR ? vals.slice(0, CUR_MONTH + 1) : vals;
   });
   const max = Math.max(...allVals, 1);
   const W = 260, H = 110, PAD_L = 30, PAD_B = 16, PAD_T = 6;
@@ -234,8 +233,7 @@ function MultiYearLineChart({ yearData, years }) {
       {years.map((y, yi) => {
         const vals = yearData[y] || Array(12).fill(0);
         const color = YEAR_COLORS[yi % YEAR_COLORS.length];
-        // for current year, only draw up to last completed month
-        const drawVals = y === CUR_YEAR ? vals.map((v, i) => i < CUR_MONTH ? v : 0) : vals;
+        const drawVals = y === CUR_YEAR ? vals.map((v, i) => i <= CUR_MONTH ? v : 0) : vals;
         const pts = drawVals.map((v, i) => `${PAD_L + i * xStep},${yFor(v)}`).join(' ');
         return (
           <g key={y}>
@@ -250,7 +248,7 @@ function MultiYearLineChart({ yearData, years }) {
       {SHORT.map((m, i) => (
         <text key={m} x={PAD_L + i * xStep} y={H + PAD_T + 12}
           textAnchor="middle" fontSize={7}
-          fill={years.includes(CUR_YEAR) && i >= CUR_MONTH ? '#d0d0d0' : '#a0aec0'}>{m}</text>
+          fill={years.includes(CUR_YEAR) && i > CUR_MONTH ? '#d0d0d0' : '#a0aec0'}>{m}</text>
       ))}
       <text x={PAD_L - 2} y={yFor(max)} textAnchor="end" fontSize={6.5} fill="#a0aec0">{max}</text>
       <text x={PAD_L - 2} y={yFor(max * 0.5)} textAnchor="end" fontSize={6.5} fill="#a0aec0">{Math.round(max * 0.5)}</text>
@@ -305,7 +303,7 @@ function MultiYearView() {
   const yearTotals = years.map(y => ({
     year: y,
     total: (yearData[y] || []).reduce((s, v, i) => {
-      if (y === CUR_YEAR && i >= CUR_MONTH) return s;
+      if (y === CUR_YEAR && i > CUR_MONTH) return s;
       return s + v;
     }, 0),
   }));
@@ -361,10 +359,10 @@ function MultiYearView() {
             </thead>
             <tbody>
               {MONTHS.map((m, mi) => {
-                const isFuture = (y) => y === CUR_YEAR && mi >= CUR_MONTH;
+                const isFuture = (y) => y === CUR_YEAR && mi > CUR_MONTH;
                 const vals = years.map(y => isFuture(y) ? null : ((yearData[y] || [])[mi] || 0));
                 return (
-                  <tr key={m} style={mi >= CUR_MONTH && years.includes(CUR_YEAR) ? { opacity: 0.4 } : {}}>
+                  <tr key={m} style={mi > CUR_MONTH && years.includes(CUR_YEAR) ? { opacity: 0.4 } : {}}>
                     <td className="multiyear-month">{SHORT[mi]}</td>
                     {vals.map((v, i) => (
                       <td key={i} className="multiyear-val">{v === null ? <em style={{color:'#ccc'}}>future</em> : v || '—'}</td>

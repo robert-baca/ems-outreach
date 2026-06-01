@@ -109,20 +109,20 @@ export async function getStats({ month, year, type = 'city' }, hospitalId = 'gra
   await initDB();
   if (month) {
     return sql`
-      SELECT city, county, SUM(transport_count)::int AS total
+      SELECT MAX(city) AS city, MAX(county) AS county, SUM(transport_count)::int AS total
       FROM transports
       WHERE month = ${+month} AND year = ${+year}
         AND COALESCE(type, 'city') = ${type}
         AND hospital_id = ${hospitalId}
-      GROUP BY city, county ORDER BY total DESC
+      GROUP BY LOWER(city) ORDER BY total DESC
     `;
   }
   return sql`
-    SELECT city, county, SUM(transport_count)::int AS total
+    SELECT MAX(city) AS city, MAX(county) AS county, SUM(transport_count)::int AS total
     FROM transports
     WHERE year = ${+year} AND COALESCE(type, 'city') = ${type}
       AND hospital_id = ${hospitalId}
-    GROUP BY city, county ORDER BY total DESC
+    GROUP BY LOWER(city) ORDER BY total DESC
   `;
 }
 
@@ -171,12 +171,12 @@ export async function getMonthlyBreakdown(year, type = 'city', hospitalId = 'gra
   const sql = db();
   await initDB();
   return sql`
-    SELECT city, month, SUM(transport_count)::int AS total
+    SELECT MAX(city) AS city, month, SUM(transport_count)::int AS total
     FROM transports
     WHERE year = ${+year} AND COALESCE(type, 'city') = ${type}
       AND hospital_id = ${hospitalId}
-    GROUP BY city, month
-    ORDER BY city, month
+    GROUP BY LOWER(city), month
+    ORDER BY MAX(city), month
   `;
 }
 
@@ -207,14 +207,14 @@ export async function getYtdCompare({ throughMonth, compareYear, type = 'city' }
   await initDB();
   const baseYear = +compareYear - 1;
   const rows = await sql`
-    SELECT city, county, year, SUM(transport_count)::int AS total
+    SELECT MAX(city) AS city, MAX(county) AS county, year, SUM(transport_count)::int AS total
     FROM transports
     WHERE year IN (${baseYear}, ${+compareYear})
       AND month <= ${+throughMonth}
       AND COALESCE(type, 'city') = ${type}
       AND hospital_id = ${hospitalId}
-    GROUP BY city, county, year
-    ORDER BY city, year
+    GROUP BY LOWER(city), year
+    ORDER BY MAX(city), year
   `;
   const map = {};
   for (const r of rows) {
