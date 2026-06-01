@@ -428,14 +428,24 @@ export default function GraphsTab({ year, month }) {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [trendsYear]);
 
-  const data = type === 'all'
-    ? [...cityData, ...agencyData].reduce((acc, row) => {
-        const key = `${row.city}|${row.month}`;
-        const existing = acc.find(r => r.city === row.city && r.month === row.month);
-        if (existing) { existing.total += row.total; return acc; }
-        return [...acc, { ...row }];
-      }, [])
+  const rawData = type === 'all'
+    ? [...cityData, ...agencyData]
     : type === 'city' ? cityData : agencyData;
+
+  // Merge rows with the same city name (case-insensitive) and month so
+  // GRAPEVINE and Grapevine don't appear as two separate chart series.
+  const dataMap = {};
+  for (const row of rawData) {
+    const key = `${row.city.toLowerCase()}|${row.month}`;
+    if (!dataMap[key]) {
+      dataMap[key] = { ...row };
+    } else {
+      dataMap[key].total += row.total;
+      // Prefer mixed-case name over all-caps when available
+      if (row.city !== row.city.toUpperCase()) dataMap[key].city = row.city;
+    }
+  }
+  const data = Object.values(dataMap);
 
   const cityTotals = {};
   data.forEach(({ city, total }) => { cityTotals[city] = (cityTotals[city] || 0) + total; });
@@ -451,7 +461,7 @@ export default function GraphsTab({ year, month }) {
   const cityMonthly = {};
   topCities.forEach(city => {
     cityMonthly[city] = Array.from({ length: 12 }, (_, i) => {
-      const row = data.find(r => r.city === city && r.month === i + 1);
+      const row = data.find(r => r.city.toLowerCase() === city.toLowerCase() && r.month === i + 1);
       return row?.total || 0;
     });
   });
