@@ -405,7 +405,6 @@ function MultiYearView() {
   );
 }
 
-const CUR_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 7 }, (_, i) => CUR_YEAR - 3 + i);
 
 export default function GraphsTab({ year, month }) {
