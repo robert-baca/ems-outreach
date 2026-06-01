@@ -256,9 +256,10 @@ export async function getYtdCompare({ throughMonth, compareYear, type = 'city' }
   `;
   const map = {};
   for (const r of rows) {
-    if (!map[r.city]) map[r.city] = { city: r.city, county: r.county, base: 0, compare: 0 };
-    if (+r.year === baseYear) map[r.city].base = r.total;
-    else map[r.city].compare = r.total;
+    const key = r.city.toLowerCase();
+    if (!map[key]) map[key] = { city: r.city, county: r.county, base: 0, compare: 0 };
+    if (+r.year === baseYear) map[key].base = r.total;
+    else { map[key].compare = r.total; map[key].city = r.city; }
   }
   return Object.values(map).sort((a, b) => b.compare - a.compare || b.base - a.base);
 }
