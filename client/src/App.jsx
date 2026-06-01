@@ -231,6 +231,7 @@ function AppInner() {
         <QuickEntryModal
           month={month}
           year={year}
+          customCities={customCities}
           onClose={() => setShowQuickEntry(false)}
           onSave={handleQuickSave}
         />

@@ -8,7 +8,7 @@ function blankCounts() {
   return Array(12).fill('');
 }
 
-export default function QuickEntryModal({ month, year, onClose, onSave }) {
+export default function QuickEntryModal({ month, year, onClose, onSave, customCities = [] }) {
   const [city, setCity] = useState('');
   const [type, setType] = useState('city');
   const [entryYear, setEntryYear] = useState(year);
@@ -85,6 +85,9 @@ export default function QuickEntryModal({ month, year, onClose, onSave }) {
               />
               <datalist id="qe-city-list">
                 {DFW_CITIES.map(({ city }) => <option key={city} value={city} />)}
+                {customCities
+                  .filter(c => !DFW_CITIES.some(d => d.city.toLowerCase() === c.city.toLowerCase()))
+                  .map(({ city }) => <option key={city} value={city} />)}
               </datalist>
             </div>
             <div className="qe-field">

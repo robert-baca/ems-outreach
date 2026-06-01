@@ -212,7 +212,7 @@ function MultiYearLineChart({ yearData, years }) {
   const W = 260, H = 110, PAD_L = 30, PAD_B = 16, PAD_T = 6;
   const xStep = (W - PAD_L) / 11;
   const yFor = v => PAD_T + H - (v / max) * H;
-  const cutX = PAD_L + CUR_MONTH * xStep;
+  const cutX = PAD_L + (CUR_MONTH + 1) * xStep;
 
   return (
     <svg viewBox={`0 0 ${W} ${H + PAD_B + PAD_T}`} style={{ width: '100%' }}>
@@ -405,23 +405,29 @@ function MultiYearView() {
   );
 }
 
+const CUR_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 7 }, (_, i) => CUR_YEAR - 3 + i);
+
 export default function GraphsTab({ year, month }) {
   const [cityData, setCityData] = useState([]);
   const [agencyData, setAgencyData] = useState([]);
   const [type, setType] = useState('city');
   const [view, setView] = useState('trends');
   const [loading, setLoading] = useState(false);
+  const [trendsYear, setTrendsYear] = useState(year);
+
+  useEffect(() => { setTrendsYear(year); }, [year]);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      apiFetch(`/api/trends?year=${year}&type=city`).then(r => r.json()),
-      apiFetch(`/api/trends?year=${year}&type=agency`).then(r => r.json()),
+      apiFetch(`/api/trends?year=${trendsYear}&type=city`).then(r => r.json()),
+      apiFetch(`/api/trends?year=${trendsYear}&type=agency`).then(r => r.json()),
     ]).then(([city, agency]) => {
       setCityData(city);
       setAgencyData(agency);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [year]);
+  }, [trendsYear]);
 
   const data = type === 'all'
     ? [...cityData, ...agencyData].reduce((acc, row) => {
@@ -474,22 +480,31 @@ export default function GraphsTab({ year, month }) {
         <MultiYearView />
       ) : (
         <>
-          <div className="graphs-type-toggle">
-            <button className={`graphs-type-btn${type === 'city' ? ' active' : ''}`} onClick={() => setType('city')}>Cities</button>
-            <button className={`graphs-type-btn agency${type === 'agency' ? ' active' : ''}`} onClick={() => setType('agency')}>Agencies</button>
-            <button className={`graphs-type-btn${type === 'all' ? ' active' : ''}`} onClick={() => setType('all')}>All</button>
+          <div className="graphs-trends-header">
+            <div className="graphs-type-toggle">
+              <button className={`graphs-type-btn${type === 'city' ? ' active' : ''}`} onClick={() => setType('city')}>Cities</button>
+              <button className={`graphs-type-btn agency${type === 'agency' ? ' active' : ''}`} onClick={() => setType('agency')}>Agencies</button>
+              <button className={`graphs-type-btn${type === 'all' ? ' active' : ''}`} onClick={() => setType('all')}>All</button>
+            </div>
+            <select
+              className="graphs-year-select"
+              value={trendsYear}
+              onChange={e => setTrendsYear(+e.target.value)}
+            >
+              {YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
           </div>
 
           {loading ? (
             <div className="empty-state">Loading…</div>
           ) : data.length === 0 ? (
-            <div className="empty-state">No {type} data for {year}.</div>
+            <div className="empty-state">No {type} data for {trendsYear}.</div>
           ) : (
             <>
               <div className="graphs-summary">
                 <div className="graphs-summary-item">
                   <span className="graphs-summary-val">{yearTotal.toLocaleString()}</span>
-                  <span className="graphs-summary-lbl">{year} total</span>
+                  <span className="graphs-summary-lbl">{trendsYear} total</span>
                 </div>
                 <div className="graphs-summary-item">
                   <span className="graphs-summary-val">{monthlyTotals[month - 1] || 0}</span>
@@ -501,7 +516,7 @@ export default function GraphsTab({ year, month }) {
                 </div>
               </div>
 
-              <p className="stats-header" style={{ marginBottom: 4 }}>Monthly totals — {year}</p>
+              <p className="stats-header" style={{ marginBottom: 4 }}>Monthly totals — {trendsYear}</p>
               <OverallBarChart values={monthlyTotals} activeIndex={month - 1} />
 
               {topCities.length > 1 && (

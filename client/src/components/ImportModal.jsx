@@ -297,6 +297,11 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
               <p style={{ fontWeight: 700, fontSize: 16, marginTop: 10 }}>
                 {result.saved} record{result.saved !== 1 ? 's' : ''} imported
               </p>
+              {result.skipped > 0 && (
+                <p style={{ color: '#718096', fontSize: 13, marginTop: 4 }}>
+                  {result.skipped} duplicate{result.skipped !== 1 ? 's' : ''} skipped (already in database)
+                </p>
+              )}
               {result.geocoded > 0 && (
                 <p style={{ color: '#2b6cb0', fontSize: 13, marginTop: 6 }}>
                   {result.geocoded} new pin{result.geocoded !== 1 ? 's' : ''} added to map:{' '}

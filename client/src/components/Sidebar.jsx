@@ -114,7 +114,7 @@ export default function Sidebar({
       </div>
 
       <div className="sidebar-content">
-        {tab === 'add' && <TransportForm onAdd={onAdd} />}
+        {tab === 'add' && <TransportForm onAdd={onAdd} customCities={customCities} />}
 
         {tab === 'stats' && (
           <>
@@ -253,7 +253,7 @@ export default function Sidebar({
         })()}
 
         {tab === 'list' && (
-          <LogTab month={month} year={year} onDelete={onDelete} />
+          <LogTab month={month} year={year} onDelete={onDelete} onRefresh={onRefresh} />
         )}
 
         {tab === 'graphs' && (
@@ -548,7 +548,7 @@ function CityDetail({ city, history, month, year, onBack, coords, isCustom, onPi
   );
 }
 
-function LogTab({ month, year, onDelete }) {
+function LogTab({ month, year, onDelete, onRefresh }) {
   const [logMonth, setLogMonth] = useState(month);
   const [logYear, setLogYear] = useState(year);
   const [citySearch, setCitySearch] = useState('');
@@ -586,6 +586,28 @@ function LogTab({ month, year, onDelete }) {
     setEntries(prev => prev.filter(e => e.id !== id));
   };
 
+  const handleEdit = async (id, newCount) => {
+    await apiFetch(`/api/transports/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transport_count: newCount }),
+    });
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, transport_count: newCount } : e));
+    onRefresh?.();
+  };
+
+  const handleClearMonth = async () => {
+    const label = `${MONTHS[logMonth - 1]} ${logYear}`;
+    if (!confirm(`Delete ALL ${entries.length} records for ${label}? This cannot be undone.`)) return;
+    await apiFetch('/api/transports', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month: logMonth, year: logYear }),
+    });
+    setEntries([]);
+    onRefresh?.();
+  };
+
   const searching = citySearch.trim().length >= 2;
 
   return (
@@ -603,6 +625,11 @@ function LogTab({ month, year, onDelete }) {
           onChange={e => setLogYear(+e.target.value)}
         />
         <span className="log-count">{entries.length} entries</span>
+        {!searching && entries.length > 0 && (
+          <button className="log-clear-btn" onClick={handleClearMonth} title="Delete all records for this month">
+            🗑 Clear
+          </button>
+        )}
       </div>
       <div className="log-search-row">
         <input
@@ -647,7 +674,7 @@ function LogTab({ month, year, onDelete }) {
                       {hasDupe && <span className="log-dupe-badge">⚠ {rows.length} entries</span>}
                     </div>
                     {rows.map(t => (
-                      <TransportCard key={t.id} t={t} label={t.type ?? 'city'} onDelete={handleDelete} />
+                      <TransportCard key={t.id} t={t} label={t.type ?? 'city'} onDelete={handleDelete} onEdit={handleEdit} />
                     ))}
                   </div>
                 );
@@ -658,7 +685,7 @@ function LogTab({ month, year, onDelete }) {
       ) : (
         <div className="transport-list">
           {entries.map(t => (
-            <TransportCard key={t.id} t={t} label={t.type ?? 'city'} onDelete={handleDelete} />
+            <TransportCard key={t.id} t={t} label={t.type ?? 'city'} onDelete={handleDelete} onEdit={handleEdit} />
           ))}
         </div>
       )}
@@ -666,10 +693,24 @@ function LogTab({ month, year, onDelete }) {
   );
 }
 
-function TransportCard({ t, label, onDelete, showMonth = false }) {
+function TransportCard({ t, label, onDelete, onEdit, showMonth = false }) {
+  const [editing, setEditing] = useState(false);
+  const [editCount, setEditCount] = useState(String(t.transport_count));
+  const [saving, setSaving] = useState(false);
+
   const added = t.created_at
     ? new Date(t.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
     : null;
+
+  const save = async () => {
+    const n = +editCount;
+    if (!n || n < 1) return;
+    if (n === t.transport_count) { setEditing(false); return; }
+    setSaving(true);
+    try { await onEdit(t.id, n); setEditing(false); }
+    finally { setSaving(false); }
+  };
+
   return (
     <div className="transport-card">
       <div className="transport-card-header">
@@ -682,10 +723,37 @@ function TransportCard({ t, label, onDelete, showMonth = false }) {
             {label}
           </span>
         </div>
-        <span className="transport-count-badge">{t.transport_count}</span>
+        {editing ? (
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <input
+              type="number" min={1} max={9999} value={editCount}
+              onChange={e => setEditCount(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
+              autoFocus
+              style={{ width: 56, padding: '2px 6px', border: '1px solid #667eea', borderRadius: 4, fontSize: 13 }}
+            />
+            <button onClick={save} disabled={saving}
+              style={{ padding: '2px 8px', background: '#1a365d', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>
+              {saving ? '…' : '✓'}
+            </button>
+            <button onClick={() => setEditing(false)}
+              style={{ padding: '2px 8px', background: '#e2e8f0', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>
+              ✕
+            </button>
+          </div>
+        ) : (
+          <span
+            className="transport-count-badge"
+            title="Click to edit"
+            style={{ cursor: 'pointer' }}
+            onClick={() => { setEditCount(String(t.transport_count)); setEditing(true); }}
+          >
+            {t.transport_count}
+          </span>
+        )}
       </div>
       {added && <div className="transport-added">Added {added}</div>}
-      <button className="btn-delete" title="Remove" onClick={() => onDelete(t.id)}>×</button>
+      {!editing && <button className="btn-delete" title="Remove" onClick={() => onDelete(t.id)}>×</button>}
     </div>
   );
 }

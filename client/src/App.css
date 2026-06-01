@@ -652,6 +652,11 @@ body {
   font-size: 13px; width: 72px; background: #fff; outline: none;
 }
 .log-count { font-size: 12px; color: #a0aec0; white-space: nowrap; margin-left: auto; }
+.log-clear-btn {
+  font-size: 11px; padding: 3px 8px; border: 1px solid #fed7d7; border-radius: 5px;
+  background: #fff5f5; color: #c53030; cursor: pointer; white-space: nowrap;
+}
+.log-clear-btn:hover { background: #fed7d7; }
 .log-search-row {
   display: flex; align-items: center; gap: 6px; margin-bottom: 8px; position: relative;
 }
@@ -702,6 +707,14 @@ body {
 /* ── Graphs Tab ── */
 .graphs-tab { display: flex; flex-direction: column; gap: 0; }
 
+.graphs-trends-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+}
+.graphs-trends-header .graphs-type-toggle { margin-bottom: 0; }
+.graphs-year-select {
+  font-size: 13px; padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 6px;
+  background: #fff; color: #1a365d; cursor: pointer;
+}
 .graphs-type-toggle {
   display: flex; gap: 6px; margin-bottom: 12px;
 }

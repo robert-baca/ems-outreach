@@ -1,4 +1,4 @@
-import { getTransports, addTransport, getCustomCities, upsertCustomCity, deleteAllByName } from './_db.js';
+import { getTransports, addTransport, getCustomCities, upsertCustomCity, deleteAllByName, clearMonthData } from './_db.js';
 import { geocodeCity } from './_geocode.js';
 import { requireAuth } from './_auth.js';
 
@@ -35,9 +35,13 @@ export default async function handler(req, res) {
     return res.status(201).json({ ...record, newCity });
   }
 
-  // DELETE without an ID = purge all records for a city/type
+  // DELETE without an ID = purge all records for a city/type, or clear a whole month
   if (req.method === 'DELETE') {
-    const { city, type } = req.body;
+    const { city, type, month, year } = req.body;
+    if (!city && month && year) {
+      await clearMonthData(+month, +year, hospitalId);
+      return res.json({ ok: true });
+    }
     if (!city || !type) return res.status(400).json({ error: 'city and type required' });
     await deleteAllByName(city, type, hospitalId);
     return res.json({ ok: true });

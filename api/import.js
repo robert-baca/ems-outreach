@@ -1,4 +1,4 @@
-import { addTransport, getCustomCities, upsertCustomCity } from './_db.js';
+import { addTransport, getCustomCities, upsertCustomCity, getExistingKeys } from './_db.js';
 import { geocodeCity } from './_geocode.js';
 import { requireAuth } from './_auth.js';
 
@@ -32,10 +32,16 @@ export default async function handler(req, res) {
     }
   }
 
-  let saved = 0;
+  // Build set of already-existing city+month+year+type keys to skip duplicates
+  const years = [...new Set(records.map(r => +r.year).filter(Boolean))];
+  const existingKeys = years.length > 0 ? await getExistingKeys(years, hospitalId) : new Set();
+
+  let saved = 0, skipped = 0;
   for (const rec of records) {
+    const key = `${rec.city.toLowerCase()}|${rec.month}|${rec.year}|${rec.type || 'city'}`;
+    if (existingKeys.has(key)) { skipped++; continue; }
     try { await addTransport(rec, hospitalId); saved++; } catch {}
   }
 
-  res.json({ saved, geocoded: geocodedResults.length, geocodedCities: geocodedResults, failed });
+  res.json({ saved, skipped, geocoded: geocodedResults.length, geocodedCities: geocodedResults, failed });
 }

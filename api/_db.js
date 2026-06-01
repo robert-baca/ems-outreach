@@ -141,15 +141,24 @@ export async function getCityHistory(city, hospitalId = 'grapevine') {
   return rows.map(r => ({ year: +r.year, month: +r.month, total: +r.total }));
 }
 
+function normalizeCityName(name) {
+  return name.trim().replace(/\S+/g, w => {
+    // Preserve short all-caps abbreviations like DFW, NRH, EMS
+    if (w.length <= 3 && w === w.toUpperCase()) return w;
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  });
+}
+
 export async function addTransport({ city, county, transport_count, month, year, type = 'city' }, hospitalId = 'grapevine') {
   const sql = db();
   await initDB();
   const aliasRows = await sql`SELECT canonical FROM city_aliases WHERE LOWER(alias) = LOWER(${city}) AND hospital_id = ${hospitalId} LIMIT 1`;
   const resolvedCity = aliasRows.length ? aliasRows[0].canonical : city;
+  const normalizedCity = normalizeCityName(resolvedCity);
   const id = randomUUID();
   const rows = await sql`
     INSERT INTO transports (id, city, county, transport_count, month, year, type, hospital_id)
-    VALUES (${id}, ${resolvedCity}, ${county ?? null}, ${+transport_count || 1}, ${+month}, ${+year}, ${type}, ${hospitalId})
+    VALUES (${id}, ${normalizedCity}, ${county ?? null}, ${+transport_count || 1}, ${+month}, ${+year}, ${type}, ${hospitalId})
     RETURNING *
   `;
   return rows[0];
@@ -200,6 +209,35 @@ export async function deleteAllByName(city, type, hospitalId = 'grapevine') {
   const sql = db();
   await initDB();
   await sql`DELETE FROM transports WHERE LOWER(city) = LOWER(${city}) AND COALESCE(type,'city') = ${type} AND hospital_id = ${hospitalId}`;
+}
+
+export async function updateTransport(id, transport_count) {
+  const sql = db();
+  await initDB();
+  const rows = await sql`
+    UPDATE transports SET transport_count = ${+transport_count}
+    WHERE id = ${id} RETURNING *
+  `;
+  return rows[0] ?? null;
+}
+
+export async function clearMonthData(month, year, hospitalId = 'grapevine') {
+  const sql = db();
+  await initDB();
+  await sql`DELETE FROM transports WHERE month = ${+month} AND year = ${+year} AND hospital_id = ${hospitalId}`;
+}
+
+export async function getExistingKeys(years, hospitalId = 'grapevine') {
+  const sql = db();
+  await initDB();
+  const uniqueYears = [...new Set(years.map(y => +y))];
+  const results = await Promise.all(
+    uniqueYears.map(y =>
+      sql`SELECT LOWER(city) AS city, month, year, COALESCE(type,'city') AS type
+          FROM transports WHERE year = ${y} AND hospital_id = ${hospitalId}`
+    )
+  );
+  return new Set(results.flat().map(r => `${r.city}|${r.month}|${r.year}|${r.type}`));
 }
 
 export async function getYtdCompare({ throughMonth, compareYear, type = 'city' }, hospitalId = 'grapevine') {

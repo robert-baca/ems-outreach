@@ -40,6 +40,10 @@ Total agency transports: ${agencyStats.reduce((s, r) => s + r.total, 0)}`;
     const q = input.trim();
     if (!q || streaming) return;
 
+    // Capture completed history before adding new messages
+    const history = messages.filter(m => m.text.trim());
+    const isFirst = history.length === 0;
+
     const userMsg = { role: 'user', text: q };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
@@ -52,7 +56,11 @@ Total agency transports: ${agencyStats.reduce((s, r) => s + r.total, 0)}`;
       const resp = await apiFetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q, context: buildContext() }),
+        body: JSON.stringify({
+          question: q,
+          context: isFirst ? buildContext() : undefined,
+          history,
+        }),
       });
 
       if (!resp.ok) {

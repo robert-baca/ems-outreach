@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { DFW_CITIES, MONTHS } from '../cityData.js';
 
-const cityIndex = Object.fromEntries(DFW_CITIES.map(({ city, county }) => [city, county]));
+const cityLookup = new Map(DFW_CITIES.map(({ city, county }) => [city.toLowerCase(), county]));
 const now = new Date();
 
-export default function TransportForm({ onAdd }) {
+export default function TransportForm({ onAdd, customCities = [] }) {
   const [form, setForm] = useState({
     city: '',
     transport_count: 1,
@@ -18,14 +18,21 @@ export default function TransportForm({ onAdd }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.city.trim()) return;
-    const isKnown = cityIndex[form.city.trim()] !== undefined;
+    const trimmed = form.city.trim();
+    if (!trimmed) return;
+
+    const lowerCity = trimmed.toLowerCase();
+    const county = cityLookup.get(lowerCity) ?? null;
+    const isKnown =
+      cityLookup.has(lowerCity) ||
+      customCities.some(c => c.city.toLowerCase() === lowerCity);
+
     setSubmitting(true);
     if (!isKnown) setGeocoding(true);
     try {
       await onAdd({
-        city: form.city.trim(),
-        county: cityIndex[form.city.trim()] ?? null,
+        city: trimmed,
+        county,
         transport_count: +form.transport_count || 1,
         month: +form.month,
         year: +form.year,
@@ -37,6 +44,8 @@ export default function TransportForm({ onAdd }) {
       setGeocoding(false);
     }
   };
+
+  const customOnly = customCities.filter(c => !cityLookup.has(c.city.toLowerCase()));
 
   return (
     <form className="transport-form" onSubmit={handleSubmit}>
@@ -72,6 +81,7 @@ export default function TransportForm({ onAdd }) {
         />
         <datalist id="city-list">
           {DFW_CITIES.map(({ city }) => <option key={city} value={city} />)}
+          {customOnly.map(({ city }) => <option key={city} value={city} />)}
         </datalist>
       </div>
 

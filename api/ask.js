@@ -14,19 +14,27 @@ Your role is to:
 - Point out which counties or areas need more attention
 - Be concise, practical, and grounded in the data provided
 
-The user will provide current stats context in their message. Respond conversationally but keep answers focused and actionable.`;
+The user will provide current stats context in their first message. Respond conversationally but keep answers focused and actionable.`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const hospitalId = await requireAuth(req, res);
   if (!hospitalId) return;
 
-  const { question, context } = req.body;
+  const { question, context, history = [] } = req.body;
   if (!question) return res.status(400).json({ error: 'question required' });
 
-  const userMessage = context
+  // Build multi-turn message array from conversation history
+  const messages = history
+    .filter(m => m.text?.trim())
+    .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
+
+  // First message includes the data context; follow-ups are plain questions
+  const isFirst = messages.length === 0;
+  const currentContent = isFirst && context
     ? `${context}\n\nMy question: ${question}`
     : question;
+  messages.push({ role: 'user', content: currentContent });
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -37,7 +45,7 @@ export default async function handler(req, res) {
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: userMessage }],
+      messages,
     });
 
     for await (const event of stream) {
