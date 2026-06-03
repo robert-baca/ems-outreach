@@ -26,7 +26,7 @@ const SECTION_LABELS = {
   yoyComparison:   'Year-over-Year Comparison',
 };
 
-export default function ExportModal({ stats, prevStats, agencyStats, month, year, viewMode, hospitalConfig, onClose }) {
+export default function ExportModal({ stats, prevStats, prevAgencyStats = [], agencyStats, month, year, viewMode, hospitalConfig, onClose }) {
   const [sections, setSections] = useState(DEFAULT_SECTIONS);
   const [monthlyTotals, setMonthlyTotals] = useState(Array(12).fill(0));
   const [yoyData, setYoyData] = useState([]);
@@ -51,11 +51,13 @@ export default function ExportModal({ stats, prevStats, agencyStats, month, year
   const period       = isYear ? `Full Year ${year}` : `${MONTHS[month - 1]} ${year}`;
   const hospitalName = hospitalConfig?.name ?? 'Baylor Scott & White Medical Center — Grapevine';
 
-  const cityTotal     = stats.reduce((s, r) => s + r.total, 0);
-  const agencyTotal   = agencyStats.reduce((s, r) => s + r.total, 0);
-  const grandTotal    = cityTotal + agencyTotal;
-  const prevCityTotal = prevStats.reduce((s, r) => s + r.total, 0);
-  const momPct        = prevCityTotal > 0 ? Math.round(((cityTotal - prevCityTotal) / prevCityTotal) * 100) : null;
+  const cityTotal      = stats.reduce((s, r) => s + r.total, 0);
+  const agencyTotal    = agencyStats.reduce((s, r) => s + r.total, 0);
+  const grandTotal     = cityTotal + agencyTotal;
+  const prevCityTotal  = prevStats.reduce((s, r) => s + r.total, 0);
+  const prevAgencyTotal = prevAgencyStats.reduce((s, r) => s + r.total, 0);
+  const prevGrandTotal = prevCityTotal + prevAgencyTotal;
+  const momPct         = prevGrandTotal > 0 ? Math.round(((grandTotal - prevGrandTotal) / prevGrandTotal) * 100) : null;
   const ytd           = monthlyTotals.slice(0, month).reduce((s, v) => s + v, 0);
   const maxCity       = stats[0]?.total || 1;
   const maxAgency     = agencyStats[0]?.total || 1;
@@ -124,11 +126,11 @@ export default function ExportModal({ stats, prevStats, agencyStats, month, year
             </div>
             {!isYear && momPct !== null && (
               <div className="report-stat-card">
-                <div className="report-stat-label">City vs Last Month</div>
+                <div className="report-stat-label">vs Last Month</div>
                 <div className={`report-stat-value report-delta ${momPct > 0 ? 'up' : momPct < 0 ? 'down' : ''}`}>
                   {momPct > 0 ? '▲' : momPct < 0 ? '▼' : '●'} {Math.abs(momPct)}%
                 </div>
-                <div className="report-stat-sub">{cityTotal.toLocaleString()} city (was {prevCityTotal.toLocaleString()})</div>
+                <div className="report-stat-sub">{prevGrandTotal.toLocaleString()} prev month</div>
               </div>
             )}
             {!isYear && (

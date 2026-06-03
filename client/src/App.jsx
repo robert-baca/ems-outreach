@@ -55,6 +55,7 @@ function AppInner() {
 
   const [stats, setStats]               = useState([]);
   const [prevStats, setPrevStats]       = useState([]);
+  const [prevAgencyStats, setPrevAgencyStats] = useState([]);
   const [transports, setTransports]     = useState([]);
   const [agencyStats, setAgencyStats]   = useState([]);
   const [agencyTransports, setAgencyTransports] = useState([]);
@@ -80,18 +81,20 @@ function AppInner() {
     const { month: pm, year: py } = prevMonthYear(month, year);
     const prevParam = isYear ? `year=${year - 1}` : `month=${pm}&year=${py}`;
     try {
-      const [sRes, tRes, pRes, asRes, atRes] = await Promise.all([
+      const [sRes, tRes, pRes, asRes, atRes, paRes] = await Promise.all([
         apiFetch(`/api/stats?${mParam ? mParam.slice(1) + '&' : ''}year=${year}&type=city`),
         apiFetch(`/api/transports?month=${month}&year=${year}&type=city`),
         apiFetch(`/api/stats?${prevParam}&type=city`),
         apiFetch(`/api/stats?${mParam ? mParam.slice(1) + '&' : ''}year=${year}&type=agency`),
         apiFetch(`/api/transports?month=${month}&year=${year}&type=agency`),
+        apiFetch(`/api/stats?${prevParam}&type=agency`),
       ]);
       setStats(await sRes.json());
       setTransports(await tRes.json());
       setPrevStats(await pRes.json());
       setAgencyStats(await asRes.json());
       setAgencyTransports(await atRes.json());
+      setPrevAgencyStats(await paRes.json());
     } finally {
       setLoading(false);
     }
@@ -246,6 +249,7 @@ function AppInner() {
         <ExportModal
           stats={stats}
           prevStats={prevStats}
+          prevAgencyStats={prevAgencyStats}
           agencyStats={agencyStats}
           month={month}
           year={year}
