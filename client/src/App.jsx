@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar.jsx';
 import ImportModal from './components/ImportModal.jsx';
 import QuickEntryModal from './components/QuickEntryModal.jsx';
 import AdminPage from './components/AdminPage.jsx';
+import ExportModal from './components/ExportModal.jsx';
 import { MONTHS } from './cityData.js';
 import { apiFetch, setTokenGetter } from './api.js';
 
@@ -64,6 +65,7 @@ function AppInner() {
   const [showImport, setShowImport]         = useState(false);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const [showAdmin, setShowAdmin]           = useState(false);
+  const [showExport, setShowExport]         = useState(false);
   const [hospitalConfig, setHospitalConfig] = useState(null);
 
   useEffect(() => {
@@ -179,6 +181,7 @@ function AppInner() {
           {loading && <span className="loading-dot" />}
           <button className="import-header-btn" onClick={() => setShowQuickEntry(true)}>✏ Quick Entry</button>
           <button className="import-header-btn" onClick={() => setShowImport(true)}>⬆ Import</button>
+          <button className="import-header-btn" onClick={() => setShowExport(true)}>📄 Export</button>
           {CLERK_ENABLED && hospitalConfig?.isAdmin && (
             <button className="import-header-btn" onClick={() => setShowAdmin(true)}>⚙ Admin</button>
           )}
@@ -238,6 +241,18 @@ function AppInner() {
       )}
       {showAdmin && (
         <AdminPage onClose={() => setShowAdmin(false)} />
+      )}
+      {showExport && (
+        <ExportModal
+          stats={stats}
+          prevStats={prevStats}
+          agencyStats={agencyStats}
+          month={month}
+          year={year}
+          viewMode={viewMode}
+          hospitalConfig={hospitalConfig}
+          onClose={() => setShowExport(false)}
+        />
       )}
     </div>
   );

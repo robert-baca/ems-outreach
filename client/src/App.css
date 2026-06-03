@@ -993,3 +993,122 @@ body {
   margin-left: auto;
 }
 .purge-btn:hover { opacity: 1; }
+
+/* ── Export / Print Report ─────────────────────────────────────────── */
+.report-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  z-index: 1200; overflow-y: auto; padding: 20px;
+  display: flex; flex-direction: column; align-items: center;
+}
+.report-controls {
+  display: flex; gap: 10px; margin-bottom: 14px;
+}
+.report-print-btn {
+  padding: 9px 20px; background: #1a365d; color: #fff;
+  border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+  cursor: pointer;
+}
+.report-print-btn:hover { background: #2a4a7f; }
+.report-close-btn {
+  padding: 9px 16px; background: #fff; color: #4a5568;
+  border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;
+  cursor: pointer;
+}
+.report-page {
+  background: #fff; width: 780px; min-height: 960px;
+  border-radius: 10px; box-shadow: 0 4px 32px rgba(0,0,0,.25);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* Header */
+.report-header {
+  background: #1a365d; color: #fff;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 28px;
+}
+.report-header-left { display: flex; align-items: center; gap: 14px; }
+.report-header-icon { font-size: 28px; }
+.report-title { font-size: 20px; font-weight: 800; letter-spacing: .3px; }
+.report-subtitle { font-size: 12px; opacity: .8; margin-top: 2px; }
+.report-period-badge {
+  background: rgba(255,255,255,.18); padding: 6px 16px;
+  border-radius: 20px; font-size: 14px; font-weight: 700;
+}
+
+/* Stat cards */
+.report-stats-row {
+  display: flex; gap: 1px; background: #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+.report-stat-card {
+  flex: 1; background: #fff; padding: 14px 18px;
+}
+.report-stat-primary { background: #ebf8ff; }
+.report-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: #718096; font-weight: 600; }
+.report-stat-value { font-size: 26px; font-weight: 800; color: #1a365d; line-height: 1.1; margin: 4px 0 3px; }
+.report-stat-city { font-size: 18px; }
+.report-stat-sub { font-size: 11px; color: #a0aec0; }
+.report-delta.up { color: #276749; }
+.report-delta.down { color: #c53030; }
+
+/* Body columns */
+.report-body {
+  display: flex; flex: 1; gap: 0;
+}
+.report-col-left {
+  flex: 1.4; padding: 18px 24px; border-right: 1px solid #e8ecf0;
+}
+.report-col-right {
+  flex: 1; padding: 18px 20px; display: flex; flex-direction: column; gap: 18px;
+}
+.report-section-title {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: #718096; font-weight: 700; margin-bottom: 10px; padding-bottom: 4px;
+  border-bottom: 2px solid #1a365d;
+}
+
+/* Rank table */
+.report-rank-table { width: 100%; border-collapse: collapse; }
+.report-rank-table tr { border-bottom: 1px solid #f7fafc; }
+.report-rank-num { font-size: 10px; color: #a0aec0; width: 24px; padding: 4px 0; }
+.report-rank-name { font-size: 12px; font-weight: 600; color: #2d3748; padding: 4px 8px; }
+.report-rank-bar { width: 130px; padding: 4px 0; }
+.report-rank-val { font-size: 12px; font-weight: 700; color: #1a365d; text-align: right; padding: 4px 0; min-width: 36px; }
+.report-bar-track { height: 10px; background: #edf2f7; border-radius: 5px; overflow: hidden; }
+.report-bar-fill { height: 100%; border-radius: 5px; min-width: 4px; }
+.report-bar-city { background: #1a365d; opacity: .85; }
+.report-bar-agency { background: #667eea; }
+
+/* Trend bars */
+.report-trend-bars {
+  display: flex; align-items: flex-end; gap: 3px; height: 90px; padding-top: 14px;
+}
+.report-trend-col {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+}
+.report-trend-val { font-size: 7px; color: #718096; margin-bottom: 2px; }
+.report-trend-bar-wrap { flex: 1; display: flex; align-items: flex-end; width: 100%; }
+.report-trend-bar { width: 100%; border-radius: 2px 2px 0 0; min-height: 3px; }
+.report-trend-month { font-size: 8px; margin-top: 3px; }
+
+/* Footer */
+.report-footer {
+  padding: 10px 28px; border-top: 1px solid #e8ecf0;
+  font-size: 10px; color: #a0aec0; text-align: center;
+}
+
+/* ── Print media ────────────────────────────────────────────────────── */
+@media print {
+  @page { margin: 0.4in; size: letter portrait; }
+  body > * { display: none !important; }
+  .report-overlay { 
+    display: block !important; position: static !important;
+    background: none !important; padding: 0 !important;
+  }
+  .no-print { display: none !important; }
+  .report-page {
+    width: 100% !important; box-shadow: none !important;
+    border-radius: 0 !important; min-height: unset !important;
+  }
+  .report-stat-value { font-size: 22px !important; }
+}
