@@ -130,7 +130,7 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
                 <div className={`report-stat-value report-delta ${momPct > 0 ? 'up' : momPct < 0 ? 'down' : ''}`}>
                   {momPct > 0 ? '▲' : momPct < 0 ? '▼' : '●'} {Math.abs(momPct)}%
                 </div>
-                <div className="report-stat-sub">{prevGrandTotal.toLocaleString()} prev month</div>
+                <div className="report-stat-sub">{grandTotal.toLocaleString()} vs {prevGrandTotal.toLocaleString()} prior (all transports)</div>
               </div>
             )}
             {!isYear && (
@@ -187,7 +187,10 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
         <div className="report-body">
           {sections.cityRankings && (
             <div className="report-col-left">
-              <div className="report-section-title">City Transport Volume</div>
+              <div className="report-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span>City Transport Volume</span>
+                {sections.growthArrows && <span style={{ fontSize: 9, fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#a0aec0' }}>▲▼ = vs prior month</span>}
+              </div>
               <table className="report-rank-table">
                 <tbody>
                   {cityMoM.slice(0, 15).map((s, i) => (
