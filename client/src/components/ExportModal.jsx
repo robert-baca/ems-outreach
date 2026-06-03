@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MONTHS } from '../cityData.js';
 import { apiFetch } from '../api.js';
 
@@ -26,10 +26,72 @@ const SECTION_LABELS = {
   yoyComparison:   'Year-over-Year Comparison',
 };
 
+// ── Multi-select city picker ──────────────────────────────────────────
+function CityPicker({ label, allCities, includes, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  // Click-outside to close
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const isAll     = includes === null;
+  const isChecked = (city) => includes === null || includes.has(city);
+  const count     = includes === null ? allCities.length : includes.size;
+
+  const toggle = (city) => {
+    if (includes === null) {
+      // Go from "all" to explicit set minus this city
+      const next = new Set(allCities.filter(c => c !== city));
+      onChange(next.size === 0 ? null : next);
+    } else {
+      const next = new Set(includes);
+      if (next.has(city)) {
+        next.delete(city);
+        if (next.size === 0) return; // prevent empty
+      } else {
+        next.add(city);
+      }
+      onChange(next.size === allCities.length ? null : next);
+    }
+  };
+
+  return (
+    <div className="report-picker" ref={ref}>
+      <button className={`report-picker-trigger${open ? ' open' : ''}`} onClick={() => setOpen(o => !o)}>
+        {label}: {isAll ? 'All' : `${count} of ${allCities.length}`} ▾
+      </button>
+      {open && (
+        <div className="report-picker-panel">
+          <div className="report-picker-actions">
+            <button onClick={() => onChange(null)}>Select All</button>
+            <button onClick={() => onChange(new Set([allCities[0]]))}>Clear</button>
+          </div>
+          <div className="report-picker-list">
+            {allCities.map(city => (
+              <label key={city} className="report-picker-item">
+                <input type="checkbox" checked={isChecked(city)} onChange={() => toggle(city)} />
+                <span>{city}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────
 export default function ExportModal({ stats, prevStats, prevAgencyStats = [], agencyStats, month, year, viewMode, hospitalConfig, onClose }) {
-  const [sections, setSections] = useState(DEFAULT_SECTIONS);
+  const [sections, setSections]       = useState(DEFAULT_SECTIONS);
   const [monthlyTotals, setMonthlyTotals] = useState(Array(12).fill(0));
-  const [yoyData, setYoyData] = useState([]);
+  const [yoyData, setYoyData]         = useState([]);
+  const [cityIncludes, setCityIncludes] = useState(null);   // null = all
+  const [yoyIncludes, setYoyIncludes]   = useState(null);   // null = all
 
   const toggle = (key) => setSections(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -51,17 +113,17 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
   const period       = isYear ? `Full Year ${year}` : `${MONTHS[month - 1]} ${year}`;
   const hospitalName = hospitalConfig?.name ?? 'Baylor Scott & White Medical Center — Grapevine';
 
-  const cityTotal      = stats.reduce((s, r) => s + r.total, 0);
-  const agencyTotal    = agencyStats.reduce((s, r) => s + r.total, 0);
-  const grandTotal     = cityTotal + agencyTotal;
-  const prevCityTotal  = prevStats.reduce((s, r) => s + r.total, 0);
+  const cityTotal       = stats.reduce((s, r) => s + r.total, 0);
+  const agencyTotal     = agencyStats.reduce((s, r) => s + r.total, 0);
+  const grandTotal      = cityTotal + agencyTotal;
+  const prevCityTotal   = prevStats.reduce((s, r) => s + r.total, 0);
   const prevAgencyTotal = prevAgencyStats.reduce((s, r) => s + r.total, 0);
-  const prevGrandTotal = prevCityTotal + prevAgencyTotal;
-  const momPct         = prevGrandTotal > 0 ? Math.round(((grandTotal - prevGrandTotal) / prevGrandTotal) * 100) : null;
-  const ytd           = monthlyTotals.slice(0, month).reduce((s, v) => s + v, 0);
-  const maxCity       = stats[0]?.total || 1;
-  const maxAgency     = agencyStats[0]?.total || 1;
-  const maxBar        = Math.max(...monthlyTotals, 1);
+  const prevGrandTotal  = prevCityTotal + prevAgencyTotal;
+  const momPct          = prevGrandTotal > 0 ? Math.round(((grandTotal - prevGrandTotal) / prevGrandTotal) * 100) : null;
+  const ytd             = monthlyTotals.slice(0, month).reduce((s, v) => s + v, 0);
+  const maxCity         = stats[0]?.total || 1;
+  const maxAgency       = agencyStats[0]?.total || 1;
+  const maxBar          = Math.max(...monthlyTotals, 1);
 
   // MoM per-city
   const prevMap = new Map(prevStats.map(s => [s.city.toLowerCase(), s.total]));
@@ -71,24 +133,38 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
     return { ...s, prev, changePct: pct };
   });
 
-  // Top movers
-  const withChange  = cityMoM.filter(s => s.changePct !== null && s.changePct !== 0);
-  const gainers     = [...withChange].filter(s => s.changePct > 0).sort((a, b) => b.changePct - a.changePct).slice(0, 3);
-  const decliners   = [...withChange].filter(s => s.changePct < 0).sort((a, b) => a.changePct - b.changePct).slice(0, 3);
+  // Apply city filter
+  const filteredCityMoM = cityIncludes === null
+    ? cityMoM
+    : cityMoM.filter(s => cityIncludes.has(s.city));
+
+  // Apply YoY filter
+  const filteredYoy = yoyIncludes === null
+    ? yoyData
+    : yoyData.filter(r => yoyIncludes.has(r.city));
+
+  // Top movers from full unfiltered list
+  const withChange = cityMoM.filter(s => s.changePct !== null && s.changePct !== 0);
+  const gainers    = [...withChange].filter(s => s.changePct > 0).sort((a, b) => b.changePct - a.changePct).slice(0, 3);
+  const decliners  = [...withChange].filter(s => s.changePct < 0).sort((a, b) => a.changePct - b.changePct).slice(0, 3);
 
   const prevMonthLabel = month === 1 ? `Dec ${year - 1}` : `${MONTHS[month - 2]} ${year}`;
-  const generatedOn = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const generatedOn    = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  // City name lists for pickers
+  const allCityNames = stats.map(s => s.city);
+  const allYoyCities = yoyData.map(r => r.city);
 
   return (
     <div className="report-overlay">
 
-      {/* ── Controls (hidden when printing) ── */}
+      {/* Controls */}
       <div className="report-controls no-print">
         <button className="report-print-btn" onClick={() => window.print()}>🖨 Print / Save as PDF</button>
         <button className="report-close-btn" onClick={onClose}>✕ Close</button>
       </div>
 
-      {/* ── Section toggles (hidden when printing) ── */}
+      {/* Section toggles */}
       <div className="report-options no-print">
         <div className="report-options-title">Report Sections</div>
         <div className="report-options-grid">
@@ -99,6 +175,30 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
             </label>
           ))}
         </div>
+
+        {/* City / dept pickers — shown when relevant sections are on */}
+        {(sections.cityRankings || sections.momChanges) && allCityNames.length > 0 && (
+          <div className="report-picker-row">
+            <span className="report-picker-label">Filter City Rankings:</span>
+            <CityPicker
+              label="Cities"
+              allCities={allCityNames}
+              includes={cityIncludes}
+              onChange={setCityIncludes}
+            />
+          </div>
+        )}
+        {sections.yoyComparison && allYoyCities.length > 0 && (
+          <div className="report-picker-row">
+            <span className="report-picker-label">Filter Year-over-Year:</span>
+            <CityPicker
+              label="Departments"
+              allCities={allYoyCities}
+              includes={yoyIncludes}
+              onChange={setYoyIncludes}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Report page ── */}
@@ -183,7 +283,7 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
           </div>
         )}
 
-        {/* Body: city rankings + right col */}
+        {/* Body */}
         <div className="report-body">
           {sections.cityRankings && (
             <div className="report-col-left">
@@ -193,7 +293,7 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
               </div>
               <table className="report-rank-table">
                 <tbody>
-                  {cityMoM.slice(0, 15).map((s, i) => (
+                  {filteredCityMoM.map((s, i) => (
                     <tr key={s.city}>
                       <td className="report-rank-num">#{i + 1}</td>
                       <td className="report-rank-name">
@@ -247,8 +347,8 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
                 <div className="report-section-title">{year} Monthly Volume</div>
                 <div className="report-trend-bars">
                   {monthlyTotals.map((v, i) => {
-                    const barH   = v > 0 ? Math.max(6, Math.round((v / maxBar) * 64)) : 3;
-                    const isCur  = i === month - 1;
+                    const barH    = v > 0 ? Math.max(6, Math.round((v / maxBar) * 64)) : 3;
+                    const isCur   = i === month - 1;
                     const isFuture = i > month - 1 && !isYear;
                     return (
                       <div key={i} className="report-trend-col">
@@ -273,7 +373,7 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
           </div>
         </div>
 
-        {/* Month-over-Month table */}
+        {/* MoM table */}
         {sections.momChanges && !isYear && (
           <div className="report-full-section">
             <div className="report-section-title">
@@ -284,7 +384,7 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
                 <tr><th>City</th><th>{prevMonthLabel}</th><th>{MONTHS[month - 1]} {year}</th><th>Change</th><th>%</th></tr>
               </thead>
               <tbody>
-                {cityMoM.filter(s => s.total > 0 || s.prev > 0).slice(0, 20).map(s => {
+                {filteredCityMoM.filter(s => s.total > 0 || s.prev > 0).map(s => {
                   const diff = s.total - s.prev;
                   return (
                     <tr key={s.city}>
@@ -305,8 +405,8 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
           </div>
         )}
 
-        {/* Year-over-Year table */}
-        {sections.yoyComparison && yoyData.length > 0 && (
+        {/* YoY table */}
+        {sections.yoyComparison && filteredYoy.length > 0 && (
           <div className="report-full-section">
             <div className="report-section-title">
               Year-over-Year — Jan–{SHORT[month - 1]} {year - 1} vs {year}
@@ -316,7 +416,7 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
                 <tr><th>City</th><th>{year - 1} YTD</th><th>{year} YTD</th><th>Change</th><th>%</th></tr>
               </thead>
               <tbody>
-                {yoyData.slice(0, 20).map(r => {
+                {filteredYoy.map(r => {
                   const diff   = r.compare - r.base;
                   const pctChg = r.base > 0 ? Math.round((diff / r.base) * 100) : null;
                   return (
