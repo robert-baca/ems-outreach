@@ -124,11 +124,11 @@ export default function ExportModal({ stats, prevStats, agencyStats, month, year
             </div>
             {!isYear && momPct !== null && (
               <div className="report-stat-card">
-                <div className="report-stat-label">vs Last Month</div>
+                <div className="report-stat-label">City vs Last Month</div>
                 <div className={`report-stat-value report-delta ${momPct > 0 ? 'up' : momPct < 0 ? 'down' : ''}`}>
                   {momPct > 0 ? '▲' : momPct < 0 ? '▼' : '●'} {Math.abs(momPct)}%
                 </div>
-                <div className="report-stat-sub">{prevCityTotal.toLocaleString()} prev month</div>
+                <div className="report-stat-sub">{cityTotal.toLocaleString()} city (was {prevCityTotal.toLocaleString()})</div>
               </div>
             )}
             {!isYear && (
