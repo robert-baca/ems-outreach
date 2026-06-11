@@ -93,7 +93,7 @@ function YoyView({ year, month }) {
   const [type, setType] = useState('city');
   const [loading, setLoading] = useState(false);
   const baseYear = year - 1;
-  const throughMonth = Math.max(1, month - 1);
+  const throughMonth = month;
 
   useEffect(() => {
     setLoading(true);
