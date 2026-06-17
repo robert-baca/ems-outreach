@@ -1,10 +1,9 @@
 import { createClerkClient } from '@clerk/backend';
 
 // Returns the hospital ID for the current request, or null if unauthenticated.
-// When CLERK_SECRET_KEY is not set (local dev without auth), falls back to 'grapevine'.
 export async function getHospitalId(req) {
   const secretKey = process.env.CLERK_SECRET_KEY;
-  if (!secretKey) return 'grapevine'; // local dev fallback
+  if (!secretKey) return null; // no auth key = deny all requests
 
   const token =
     req.headers?.authorization?.replace('Bearer ', '') ||
