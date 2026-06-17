@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (!hospitalId) return;
 
   if (req.method === 'DELETE') {
-    await deleteTransport(req.query.id);
+    await deleteTransport(req.query.id, hospitalId);
     return res.json({ success: true });
   }
 
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     const { transport_count } = req.body;
     if (!transport_count || +transport_count < 1)
       return res.status(400).json({ error: 'transport_count required' });
-    const updated = await updateTransport(req.query.id, +transport_count);
+    const updated = await updateTransport(req.query.id, +transport_count, hospitalId);
     if (!updated) return res.status(404).json({ error: 'not found' });
     return res.json(updated);
   }
