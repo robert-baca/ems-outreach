@@ -164,10 +164,10 @@ export async function addTransport({ city, county, transport_count, month, year,
   return rows[0];
 }
 
-export async function deleteTransport(id) {
+export async function deleteTransport(id, hospitalId) {
   const sql = db();
   await initDB();
-  await sql`DELETE FROM transports WHERE id = ${id}`;
+  await sql`DELETE FROM transports WHERE id = ${id} AND hospital_id = ${hospitalId}`;
 }
 
 export async function getCustomCities(hospitalId = 'grapevine') {
@@ -211,12 +211,12 @@ export async function deleteAllByName(city, type, hospitalId = 'grapevine') {
   await sql`DELETE FROM transports WHERE LOWER(city) = LOWER(${city}) AND COALESCE(type,'city') = ${type} AND hospital_id = ${hospitalId}`;
 }
 
-export async function updateTransport(id, transport_count) {
+export async function updateTransport(id, transport_count, hospitalId) {
   const sql = db();
   await initDB();
   const rows = await sql`
     UPDATE transports SET transport_count = ${+transport_count}
-    WHERE id = ${id} RETURNING *
+    WHERE id = ${id} AND hospital_id = ${hospitalId} RETURNING *
   `;
   return rows[0] ?? null;
 }
