@@ -3,6 +3,20 @@ import { requireAuth } from './_auth.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Simple in-memory rate limit: max 20 requests per hospital per hour
+const rateLimitMap = new Map();
+function checkRateLimit(hospitalId) {
+  const now = Date.now();
+  const window = 60 * 60 * 1000; // 1 hour
+  const max = 20;
+  const entry = rateLimitMap.get(hospitalId) || { count: 0, resetAt: now + window };
+  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + window; }
+  if (entry.count >= max) return false;
+  entry.count++;
+  rateLimitMap.set(hospitalId, entry);
+  return true;
+}
+
 const SYSTEM_PROMPT = `You are an EMS outreach analytics assistant for Baylor Scott & White Medical Center. \
 You help the outreach coordinator understand transport patterns, identify growth opportunities, and make data-driven decisions.
 
@@ -21,8 +35,16 @@ export default async function handler(req, res) {
   const hospitalId = await requireAuth(req, res);
   if (!hospitalId) return;
 
+  if (!checkRateLimit(hospitalId)) {
+    return res.status(429).json({ error: 'Rate limit exceeded. Try again in an hour.' });
+  }
+
   const { question, context, history = [] } = req.body;
   if (!question) return res.status(400).json({ error: 'question required' });
+  if (typeof question !== 'string' || question.length > 2000)
+    return res.status(400).json({ error: 'question too long' });
+  if (!Array.isArray(history) || history.length > 50)
+    return res.status(400).json({ error: 'invalid history' });
 
   // Build multi-turn message array from conversation history
   const messages = history
