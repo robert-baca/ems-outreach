@@ -40,10 +40,18 @@ export async function initDB() {
   await sql`ALTER TABLE transports    ADD COLUMN IF NOT EXISTS hospital_id TEXT DEFAULT 'grapevine'`;
   await sql`ALTER TABLE custom_cities ADD COLUMN IF NOT EXISTS hospital_id TEXT DEFAULT 'grapevine'`;
   await sql`ALTER TABLE city_aliases  ADD COLUMN IF NOT EXISTS hospital_id TEXT DEFAULT 'grapevine'`;
-  // Seed Grapevine so the hospitals table is never empty
+  // Seed this deployment's hospital so the hospitals table is never empty.
+  // Reuses the same VITE_ branding vars set for the client, so one set of
+  // env vars covers both — no separate server-side branding vars needed.
+  const hospitalId = process.env.HOSPITAL_ID || 'grapevine';
+  const hospitalName = process.env.VITE_HOSPITAL_NAME || 'Baylor Scott & White Medical Center — Grapevine';
+  const hospitalTagline = process.env.VITE_HOSPITAL_TAGLINE || 'A Baylor Grapevine EMS Solution';
+  const mapLat = Number(process.env.VITE_MAP_LAT) || 32.9339;
+  const mapLon = Number(process.env.VITE_MAP_LON) || -97.0783;
+  const mapZoom = Number(process.env.VITE_MAP_ZOOM) || 10;
   await sql`
     INSERT INTO hospitals (id, name, subtitle, lat, lon, map_zoom)
-    VALUES ('grapevine', 'Baylor Scott & White Medical Center — Grapevine', 'A Baylor Grapevine EMS Solution', 32.9339, -97.0783, 10)
+    VALUES (${hospitalId}, ${hospitalName}, ${hospitalTagline}, ${mapLat}, ${mapLon}, ${mapZoom})
     ON CONFLICT (id) DO NOTHING
   `;
 }
