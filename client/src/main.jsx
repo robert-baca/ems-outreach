@@ -1,12 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ClerkProvider } from '@clerk/clerk-react';
 import App from './App.jsx';
 import ErrorBoundary from './ErrorBoundary.jsx';
 import './App.css';
 import 'leaflet/dist/leaflet.css';
-
-const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 // Fix Leaflet default marker icons when bundled with Vite
 import L from 'leaflet';
@@ -24,14 +21,7 @@ L.Icon.Default.mergeOptions({
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      {CLERK_KEY ? (
-        <ClerkProvider publishableKey={CLERK_KEY}>
-          <App />
-        </ClerkProvider>
-      ) : (
-        // No Clerk key set — run without auth (local dev / single-hospital mode)
-        <App />
-      )}
+      <App />
     </ErrorBoundary>
   </React.StrictMode>
 );

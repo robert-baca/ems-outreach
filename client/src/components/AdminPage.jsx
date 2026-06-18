@@ -132,112 +132,7 @@ function HospitalsPanel() {
   );
 }
 
-function UsersPanel({ hospitals }) {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(null);
-  const [error, setError] = useState('');
-
-  const load = () => {
-    setLoading(true);
-    apiFetch('/api/admin?resource=users').then(r => r.json()).then(setUsers)
-      .catch(() => setError('Failed to load users')).finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const assign = async (userId, hospitalId) => {
-    setSaving(userId + ':hospital');
-    try {
-      await apiFetch('/api/admin?resource=users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, hospitalId: hospitalId || null }),
-      });
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, hospitalId: hospitalId || null } : u));
-    } catch { setError('Failed to update user'); }
-    finally { setSaving(null); }
-  };
-
-  const toggleAdmin = async (userId, current) => {
-    setSaving(userId + ':admin');
-    try {
-      await apiFetch('/api/admin?resource=users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, isAdmin: !current }),
-      });
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, isAdmin: !current } : u));
-    } catch { setError('Failed to update user'); }
-    finally { setSaving(null); }
-  };
-
-  const displayName = (u) => {
-    if (u.firstName || u.lastName) return `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim();
-    return u.email ?? u.id;
-  };
-
-  return (
-    <div className="admin-panel">
-      <div className="admin-panel-header">
-        <h3>Users</h3>
-        <span className="admin-muted" style={{ fontSize: 12 }}>Assign hospitals and admin roles</span>
-      </div>
-
-      {error && <div className="admin-error">{error}</div>}
-
-      {loading ? <div className="empty-state">Loading…</div> : users.length === 0 ? (
-        <div className="empty-state">No users found in Clerk.</div>
-      ) : (
-        <table className="admin-table">
-          <thead>
-            <tr><th>Name</th><th>Email</th><th>Hospital</th><th>Admin</th></tr>
-          </thead>
-          <tbody>
-            {users.map(u => (
-              <tr key={u.id}>
-                <td>{displayName(u)}</td>
-                <td className="admin-muted">{u.email}</td>
-                <td>
-                  <select
-                    value={u.hospitalId ?? ''}
-                    disabled={saving === u.id + ':hospital'}
-                    onChange={e => assign(u.id, e.target.value)}
-                    className="admin-select"
-                  >
-                    <option value="">— Unassigned —</option>
-                    {hospitals.map(h => (
-                      <option key={h.id} value={h.id}>{h.name}</option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  <button
-                    className={`admin-btn small${u.isAdmin ? ' active' : ''}`}
-                    disabled={saving === u.id + ':admin'}
-                    onClick={() => toggleAdmin(u.id, u.isAdmin)}
-                    title={u.isAdmin ? 'Remove admin' : 'Make admin'}
-                  >
-                    {u.isAdmin ? '★ Admin' : '☆'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-}
-
 export default function AdminPage({ onClose }) {
-  const [tab, setTab] = useState('hospitals');
-  const [hospitals, setHospitals] = useState([]);
-
-  useEffect(() => {
-    apiFetch('/api/admin?resource=hospitals').then(r => r.json()).then(setHospitals).catch(() => {});
-  }, []);
-
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-box admin-modal">
@@ -246,21 +141,8 @@ export default function AdminPage({ onClose }) {
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
-        <div className="admin-tabs">
-          <button className={`admin-tab${tab === 'hospitals' ? ' active' : ''}`} onClick={() => setTab('hospitals')}>
-            Hospitals
-          </button>
-          <button className={`admin-tab${tab === 'users' ? ' active' : ''}`} onClick={() => setTab('users')}>
-            Users
-          </button>
-        </div>
-
         <div className="admin-content">
-          {tab === 'hospitals' ? (
-            <HospitalsPanel />
-          ) : (
-            <UsersPanel hospitals={hospitals} />
-          )}
+          <HospitalsPanel />
         </div>
       </div>
     </div>

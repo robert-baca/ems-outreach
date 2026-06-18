@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth, SignIn, SignedIn, SignedOut, useClerk } from '@clerk/clerk-react';
 import MapView from './components/MapView.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import ImportModal from './components/ImportModal.jsx';
@@ -7,9 +6,8 @@ import QuickEntryModal from './components/QuickEntryModal.jsx';
 import AdminPage from './components/AdminPage.jsx';
 import ExportModal from './components/ExportModal.jsx';
 import { MONTHS } from './cityData.js';
-import { apiFetch, setTokenGetter } from './api.js';
-
-const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+import { apiFetch } from './api.js';
+import PinGate, { logout } from './PinGate.jsx';
 
 const now = new Date();
 
@@ -18,37 +16,16 @@ function prevMonthYear(month, year) {
 }
 
 function AppShell() {
-  if (CLERK_ENABLED) {
-    return (
-      <>
-        <SignedOut>
-          <div className="signin-screen">
-            <div className="signin-card">
-              <span className="signin-icon">🏥</span>
-              <h1>EMS Outreach</h1>
-              <p>Baylor Scott &amp; White</p>
-              <SignIn routing="hash" />
-            </div>
-          </div>
-        </SignedOut>
-        <SignedIn>
-          <AppInner />
-        </SignedIn>
-      </>
-    );
-  }
-  return <AppInner />;
+  return (
+    <PinGate>
+      <AppInner />
+    </PinGate>
+  );
 }
 
 export default AppShell;
 
 function AppInner() {
-  const { getToken } = CLERK_ENABLED ? useAuth() : { getToken: null };
-  const { signOut } = CLERK_ENABLED ? useClerk() : { signOut: null };
-
-  useEffect(() => {
-    if (getToken) setTokenGetter(getToken);
-  }, [getToken]);
   const [month, setMonth]   = useState(now.getMonth() + 1);
   const [year, setYear]     = useState(now.getFullYear());
   const [viewMode, setViewMode] = useState('month'); // 'month' | 'year'
@@ -185,12 +162,8 @@ function AppInner() {
           <button className="import-header-btn" onClick={() => setShowQuickEntry(true)}>✏ Quick Entry</button>
           <button className="import-header-btn" onClick={() => setShowImport(true)}>⬆ Import</button>
           <button className="import-header-btn" onClick={() => setShowExport(true)}>📄 Export</button>
-          {CLERK_ENABLED && hospitalConfig?.isAdmin && (
-            <button className="import-header-btn" onClick={() => setShowAdmin(true)}>⚙ Admin</button>
-          )}
-          {CLERK_ENABLED && signOut && (
-            <button className="import-header-btn" onClick={() => signOut()} title="Sign out">↩ Sign Out</button>
-          )}
+          <button className="import-header-btn" onClick={() => setShowAdmin(true)}>⚙ Admin</button>
+          <button className="import-header-btn" onClick={() => logout()} title="Log out">↩ Log Out</button>
         </div>
       </header>
 
