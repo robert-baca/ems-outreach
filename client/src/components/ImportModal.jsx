@@ -112,6 +112,14 @@ function downloadTemplate(year) {
 
 // ── Component ──
 
+function validateRow(r) {
+  const errors = [];
+  if (!r.city?.trim())                          errors.push('missing name');
+  if (!r.month || r.month < 1 || r.month > 12)   errors.push('invalid month');
+  if (!r.year || isNaN(r.year))                  errors.push('invalid year');
+  return errors;
+}
+
 export default function ImportModal({ customCities, onClose, onSuccess }) {
   const [rows, setRows]         = useState([]);
   const [dragging, setDragging] = useState(false);
@@ -120,7 +128,16 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
   const [formatUsed, setFormatUsed] = useState('');
   const [templateYear, setTemplateYear] = useState(new Date().getFullYear());
   const [yearOverride, setYearOverride] = useState('');
+  const [editingRow, setEditingRow] = useState(null);
   const fileRef = useRef();
+
+  function fixRow(idx, patch) {
+    setRows(prev => prev.map((r, i) => {
+      if (i !== idx) return r;
+      const next = { ...r, ...patch };
+      return { ...next, errors: validateRow(next) };
+    }));
+  }
 
   const allKnown = new Set([
     ...Array.from(KNOWN),
@@ -269,21 +286,51 @@ export default function ImportModal({ customCities, onClose, onSuccess }) {
                   </thead>
                   <tbody>
                     {displayRows.map((r, i) => (
-                      <tr key={i} style={{ opacity: r.errors.length ? 0.4 : 1 }}>
-                        <td>{r.city || '—'}</td>
-                        <td>{r.count}</td>
-                        <td>{r.month ? MONTHS[r.month - 1] : '—'}</td>
-                        <td>{r.year || '—'}</td>
-                        <td>
-                          {r.errors.length > 0
-                            ? <span className="badge-error">{r.errors[0]}</span>
-                            : r.type === 'agency'
-                              ? <span className="badge-agency">agency</span>
-                              : allKnown.has(r.city.toLowerCase())
-                                ? <span className="badge-known">city</span>
-                                : <span className="badge-new">new pin</span>}
-                        </td>
-                      </tr>
+                      editingRow === i ? (
+                        <tr key={i}>
+                          <td>
+                            <input value={r.city} onChange={e => fixRow(i, { city: e.target.value })}
+                              style={{ width: '100%', padding: '3px 6px', fontSize: 12 }} />
+                          </td>
+                          <td>{r.count}</td>
+                          <td>
+                            <select value={r.month || ''} onChange={e => fixRow(i, { month: +e.target.value })}
+                              style={{ fontSize: 12 }}>
+                              <option value="">—</option>
+                              {MONTHS.map((m, mi) => <option key={m} value={mi + 1}>{m}</option>)}
+                            </select>
+                          </td>
+                          <td>
+                            <input type="number" value={r.year || ''} onChange={e => fixRow(i, { year: +e.target.value })}
+                              style={{ width: 70, padding: '3px 6px', fontSize: 12 }} />
+                          </td>
+                          <td>
+                            <button className="btn-cancel" style={{ fontSize: 11, padding: '3px 8px' }}
+                              onClick={() => setEditingRow(null)}>
+                              Done
+                            </button>
+                          </td>
+                        </tr>
+                      ) : (
+                        <tr key={i} style={{ opacity: r.errors.length ? 0.4 : 1 }}>
+                          <td>{r.city || '—'}</td>
+                          <td>{r.count}</td>
+                          <td>{r.month ? MONTHS[r.month - 1] : '—'}</td>
+                          <td>{r.year || '—'}</td>
+                          <td>
+                            {r.errors.length > 0
+                              ? <button className="badge-error" style={{ cursor: 'pointer', border: 'none' }}
+                                  onClick={() => setEditingRow(i)} title="Click to fix">
+                                  {r.errors[0]} ✎
+                                </button>
+                              : r.type === 'agency'
+                                ? <span className="badge-agency">agency</span>
+                                : allKnown.has(r.city.toLowerCase())
+                                  ? <span className="badge-known">city</span>
+                                  : <span className="badge-new">new pin</span>}
+                          </td>
+                        </tr>
+                      )
                     ))}
                   </tbody>
                 </table>

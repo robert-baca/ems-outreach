@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { apiFetch } from '../api.js';
 
 const GEOCODE_URL = city =>
   `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city + ', Texas, USA')}&format=json&limit=1`;
@@ -44,52 +45,34 @@ function EditRow({ pin, onSave, onDelete, onCancel, isNew }) {
   };
 
   return (
-    <tr className="pin-edit-row">
+    <tr>
       <td>
-        <input
-          value={city}
-          onChange={e => setCity(e.target.value)}
-          placeholder="Name on map"
-          disabled={!isNew}
-          style={{ width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 13 }}
-        />
+        <input className="admin-select" value={city} onChange={e => setCity(e.target.value)}
+          placeholder="Name on map" disabled={!isNew} />
       </td>
       <td>
-        <input type="number" step="0.0001" value={lat} onChange={e => setLat(e.target.value)}
-          placeholder="32.7555"
-          style={{ width: 90, padding: '5px 6px', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 12 }} />
+        <input className="admin-select" type="number" step="0.0001" value={lat}
+          onChange={e => setLat(e.target.value)} placeholder="32.7555" style={{ width: 90 }} />
       </td>
       <td>
-        <input type="number" step="0.0001" value={lon} onChange={e => setLon(e.target.value)}
-          placeholder="-97.3308"
-          style={{ width: 90, padding: '5px 6px', border: '1px solid #e2e8f0', borderRadius: 5, fontSize: 12 }} />
+        <input className="admin-select" type="number" step="0.0001" value={lon}
+          onChange={e => setLon(e.target.value)} placeholder="-97.3308" style={{ width: 90 }} />
       </td>
       <td>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          <button onClick={handleGeocode} disabled={busy || !city.trim()}
-            style={{ padding: '4px 8px', fontSize: 11, border: '1px solid #e2e8f0', borderRadius: 5,
-              background: '#f7fafc', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          <button className="admin-btn small" onClick={handleGeocode} disabled={busy || !city.trim()}>
             {busy ? '…' : '🔍 Locate'}
           </button>
-          <button onClick={handleSave} disabled={busy}
-            style={{ padding: '4px 10px', fontSize: 11, border: 'none', borderRadius: 5,
-              background: '#1a365d', color: '#fff', cursor: 'pointer' }}>
-            Save
-          </button>
-          <button onClick={onCancel}
-            style={{ padding: '4px 8px', fontSize: 11, border: '1px solid #e2e8f0', borderRadius: 5,
-              background: '#fff', cursor: 'pointer' }}>
-            Cancel
-          </button>
+          <button className="admin-btn small primary" onClick={handleSave} disabled={busy}>Save</button>
+          <button className="admin-btn small" onClick={onCancel}>Cancel</button>
           {!isNew && (
-            <button onClick={onDelete} disabled={busy}
-              style={{ padding: '4px 8px', fontSize: 11, border: 'none', borderRadius: 5,
-                background: '#fff3f3', color: '#e53e3e', cursor: 'pointer' }}>
+            <button className="admin-btn small" onClick={onDelete} disabled={busy}
+              style={{ color: '#e53e3e' }}>
               Delete
             </button>
           )}
         </div>
-        {err && <div style={{ color: '#e53e3e', fontSize: 11, marginTop: 3 }}>{err}</div>}
+        {err && <div className="admin-error" style={{ marginTop: 4 }}>{err}</div>}
       </td>
     </tr>
   );
@@ -100,13 +83,13 @@ export default function ManagePinsModal({ customCities, onClose, onChange }) {
   const [pins, setPins]       = useState(customCities);
 
   const refresh = async () => {
-    const data = await fetch('/api/cities').then(r => r.json());
+    const data = await apiFetch('/api/cities').then(r => r.json());
     setPins(data);
     onChange(data);
   };
 
   const handleSave = async (row) => {
-    await fetch('/api/cities', {
+    await apiFetch('/api/cities', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(row),
@@ -117,7 +100,7 @@ export default function ManagePinsModal({ customCities, onClose, onChange }) {
 
   const handleDelete = async (cityName) => {
     if (!confirm(`Remove "${cityName}" from the map?`)) return;
-    await fetch('/api/cities', {
+    await apiFetch('/api/cities', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ city: cityName }),
@@ -127,75 +110,50 @@ export default function ManagePinsModal({ customCities, onClose, onChange }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-box" style={{ maxWidth: 640 }}>
-        <div className="modal-header">
-          <h2>Manage Map Pins</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
-        <div className="modal-body" style={{ overflowX: 'auto' }}>
-          <p style={{ fontSize: 13, color: '#718096', marginBottom: 12 }}>
-            Custom pins override auto-geocoding. Use this to fix a city location or add an agency with a known address (e.g. MedStar → Fort Worth).
-          </p>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: '#f7fafc' }}>
-                <th style={th}>Name</th>
-                <th style={th}>Lat</th>
-                <th style={th}>Lon</th>
-                <th style={th}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pins.map(pin => (
-                editing === pin.city
-                  ? <EditRow key={pin.city} pin={pin}
-                      onSave={handleSave}
-                      onDelete={() => handleDelete(pin.city)}
-                      onCancel={() => setEditing(null)} />
-                  : (
-                    <tr key={pin.city} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                      <td style={td}><strong>{pin.city}</strong></td>
-                      <td style={td}>{(+pin.lat).toFixed(4)}</td>
-                      <td style={td}>{(+pin.lon).toFixed(4)}</td>
-                      <td style={td}>
-                        <button onClick={() => setEditing(pin.city)}
-                          style={{ padding: '3px 10px', fontSize: 12, border: '1px solid #e2e8f0',
-                            borderRadius: 5, background: '#fff', cursor: 'pointer' }}>
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  )
-              ))}
-
-              {editing === '__new__' && (
-                <EditRow pin={{ city: '', lat: '', lon: '' }} isNew
-                  onSave={handleSave}
-                  onCancel={() => setEditing(null)} />
-              )}
-            </tbody>
-          </table>
-
-          {pins.length === 0 && editing !== '__new__' && (
-            <div className="empty-state" style={{ padding: '20px 0' }}>No custom pins yet.</div>
-          )}
-        </div>
-        <div className="modal-footer">
-          <button className="btn-submit"
-            onClick={() => setEditing('__new__')}
-            disabled={!!editing}
-            style={{ marginRight: 'auto' }}>
-            + Add Pin
-          </button>
-          <button className="btn-cancel" onClick={onClose}>Close</button>
-        </div>
+    <div className="admin-panel">
+      <div className="admin-panel-header">
+        <h3>Map Pins</h3>
+        <button className="admin-btn primary" onClick={() => setEditing('__new__')} disabled={!!editing}>
+          + Add Pin
+        </button>
       </div>
+
+      <p style={{ fontSize: 13, color: '#718096', margin: '0 0 12px' }}>
+        Custom pins override auto-geocoding. Use this to fix a city location or add an agency with a known address (e.g. MedStar → Fort Worth).
+      </p>
+
+      <table className="admin-table">
+        <thead>
+          <tr><th>Name</th><th>Lat</th><th>Lon</th><th></th></tr>
+        </thead>
+        <tbody>
+          {pins.map(pin => (
+            editing === pin.city
+              ? <EditRow key={pin.city} pin={pin}
+                  onSave={handleSave}
+                  onDelete={() => handleDelete(pin.city)}
+                  onCancel={() => setEditing(null)} />
+              : (
+                <tr key={pin.city}>
+                  <td><strong>{pin.city}</strong></td>
+                  <td className="admin-muted">{(+pin.lat).toFixed(4)}</td>
+                  <td className="admin-muted">{(+pin.lon).toFixed(4)}</td>
+                  <td><button className="admin-btn small" onClick={() => setEditing(pin.city)}>Edit</button></td>
+                </tr>
+              )
+          ))}
+
+          {editing === '__new__' && (
+            <EditRow pin={{ city: '', lat: '', lon: '' }} isNew
+              onSave={handleSave}
+              onCancel={() => setEditing(null)} />
+          )}
+        </tbody>
+      </table>
+
+      {pins.length === 0 && editing !== '__new__' && (
+        <div className="empty-state">No custom pins yet.</div>
+      )}
     </div>
   );
 }
-
-const th = { padding: '8px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700,
-  textTransform: 'uppercase', letterSpacing: '.4px', color: '#718096',
-  borderBottom: '2px solid #e2e8f0' };
-const td = { padding: '8px 10px', verticalAlign: 'middle' };

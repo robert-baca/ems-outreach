@@ -20,6 +20,9 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const { id, name, subtitle, address, lat, lon, map_zoom = 10 } = req.body;
       if (!id || !name) return res.status(400).json({ error: 'id and name required' });
+      if (id.length > 100 || name.length > 200 || (subtitle ?? '').length > 200 || (address ?? '').length > 300) {
+        return res.status(400).json({ error: 'One or more fields exceed the maximum length' });
+      }
       await sql`
         INSERT INTO hospitals (id, name, subtitle, address, lat, lon, map_zoom)
         VALUES (${id}, ${name}, ${subtitle ?? ''}, ${address ?? ''}, ${lat ?? null}, ${lon ?? null}, ${map_zoom})

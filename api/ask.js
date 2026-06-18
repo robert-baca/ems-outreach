@@ -1,21 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth } from './_auth.js';
+import { checkRateLimit } from './_ratelimit.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// Simple in-memory rate limit: max 20 requests per hospital per hour
-const rateLimitMap = new Map();
-function checkRateLimit(hospitalId) {
-  const now = Date.now();
-  const window = 60 * 60 * 1000; // 1 hour
-  const max = 20;
-  const entry = rateLimitMap.get(hospitalId) || { count: 0, resetAt: now + window };
-  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + window; }
-  if (entry.count >= max) return false;
-  entry.count++;
-  rateLimitMap.set(hospitalId, entry);
-  return true;
-}
+const AI_MAX = 20;
+const AI_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 const SYSTEM_PROMPT = `You are an EMS outreach analytics assistant for Baylor Scott & White Medical Center. \
 You help the outreach coordinator understand transport patterns, identify growth opportunities, and make data-driven decisions.
@@ -35,7 +25,8 @@ export default async function handler(req, res) {
   const hospitalId = await requireAuth(req, res);
   if (!hospitalId) return;
 
-  if (!checkRateLimit(hospitalId)) {
+  const allowed = await checkRateLimit(`ai:${hospitalId}`, { max: AI_MAX, windowMs: AI_WINDOW_MS });
+  if (!allowed) {
     return res.status(429).json({ error: 'Rate limit exceeded. Try again in an hour.' });
   }
 

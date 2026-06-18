@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '../api.js';
+import ManagePinsModal from './ManagePinsModal.jsx';
 
 function HospitalsPanel() {
   const [hospitals, setHospitals] = useState([]);
@@ -89,20 +90,20 @@ function HospitalsPanel() {
             <h4>{editingId === '__new__' ? 'New Hospital' : `Edit: ${editingId}`}</h4>
             {error && <div className="admin-error">{error}</div>}
             <label>ID (slug, no spaces)
-              <input value={form.id} disabled={editingId !== '__new__'}
+              <input value={form.id} disabled={editingId !== '__new__'} maxLength={100}
                 onChange={e => setForm(f => ({ ...f, id: e.target.value.toLowerCase().replace(/\s/g, '-') }))}
                 placeholder="e.g. grapevine" />
             </label>
             <label>Hospital Name
-              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              <input value={form.name} maxLength={200} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 placeholder="e.g. BSW Medical Center — Grapevine" />
             </label>
             <label>Subtitle / Tagline
-              <input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))}
+              <input value={form.subtitle} maxLength={200} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))}
                 placeholder="e.g. A Baylor Grapevine EMS Solution" />
             </label>
             <label>Address
-              <input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+              <input value={form.address} maxLength={300} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
                 placeholder="e.g. 1650 W College St, Grapevine, TX 76051" />
             </label>
             <div className="admin-form-row">
@@ -132,7 +133,9 @@ function HospitalsPanel() {
   );
 }
 
-export default function AdminPage({ onClose }) {
+export default function AdminPage({ onClose, customCities, onPinsChange }) {
+  const [tab, setTab] = useState('hospitals');
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-box admin-modal">
@@ -141,8 +144,21 @@ export default function AdminPage({ onClose }) {
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
+        <div className="admin-tabs">
+          <button className={`admin-tab${tab === 'hospitals' ? ' active' : ''}`} onClick={() => setTab('hospitals')}>
+            Hospitals
+          </button>
+          <button className={`admin-tab${tab === 'pins' ? ' active' : ''}`} onClick={() => setTab('pins')}>
+            Map Pins
+          </button>
+        </div>
+
         <div className="admin-content">
-          <HospitalsPanel />
+          {tab === 'hospitals' ? (
+            <HospitalsPanel />
+          ) : (
+            <ManagePinsModal customCities={customCities} onChange={onPinsChange} />
+          )}
         </div>
       </div>
     </div>

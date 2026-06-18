@@ -216,7 +216,11 @@ function AppInner() {
         />
       )}
       {showAdmin && (
-        <AdminPage onClose={() => setShowAdmin(false)} />
+        <AdminPage
+          onClose={() => setShowAdmin(false)}
+          customCities={customCities}
+          onPinsChange={setCustomCities}
+        />
       )}
       {showExport && (
         <ExportModal

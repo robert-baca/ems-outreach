@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DFW_CITIES, MONTHS } from '../cityData.js';
 
 const SHORT = MONTHS.map(m => m.slice(0, 3));
@@ -15,6 +15,13 @@ export default function QuickEntryModal({ month, year, onClose, onSave, customCi
   const [counts, setCounts] = useState(blankCounts);
   const [saving, setSaving] = useState(false);
   const [savedCity, setSavedCity] = useState(null);
+  const cityInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!savedCity) return;
+    const t = setTimeout(() => setSavedCity(null), 4000);
+    return () => clearTimeout(t);
+  }, [savedCity]);
 
   const setCount = (i, val) =>
     setCounts(prev => { const next = [...prev]; next[i] = val; return next; });
@@ -34,6 +41,7 @@ export default function QuickEntryModal({ month, year, onClose, onSave, customCi
       setSavedCity(city.trim());
       setCity('');
       setCounts(blankCounts());
+      cityInputRef.current?.focus();
     } finally {
       setSaving(false);
     }
@@ -75,6 +83,7 @@ export default function QuickEntryModal({ month, year, onClose, onSave, customCi
             <div className="qe-field qe-field-city">
               <label>City / Agency Name</label>
               <input
+                ref={cityInputRef}
                 list="qe-city-list"
                 className="qe-city-input"
                 value={city}
