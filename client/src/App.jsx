@@ -55,7 +55,18 @@ function AppInner() {
     setLoading(true);
     const isYear = viewMode === 'year';
     const isYearInProgress = isYear && year === now.getFullYear();
-    const throughMonth = now.getMonth() + 1;
+    let throughMonth = now.getMonth() + 1;
+    if (isYearInProgress) {
+      try {
+        const [cTrend, aTrend] = await Promise.all([
+          apiFetch(`/api/trends?year=${year}&type=city`).then(r => r.json()),
+          apiFetch(`/api/trends?year=${year}&type=agency`).then(r => r.json()),
+        ]);
+        const lastDataMonth = [...cTrend, ...aTrend]
+          .reduce((max, r) => (r.total > 0 && r.month > max ? r.month : max), 0);
+        if (lastDataMonth > 0) throughMonth = lastDataMonth;
+      } catch { /* fall back to calendar month */ }
+    }
     const mParam = isYear ? (isYearInProgress ? `&throughMonth=${throughMonth}` : '') : `&month=${month}`;
     const { month: pm, year: py } = prevMonthYear(month, year);
     const prevParam = isYear

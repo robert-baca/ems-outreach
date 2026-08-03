@@ -90,10 +90,15 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
   const [sections, setSections]       = useState(DEFAULT_SECTIONS);
   const [monthlyTotals, setMonthlyTotals] = useState(Array(12).fill(0));
   const [yoyData, setYoyData]         = useState([]);
+  const [lastDataMonth, setLastDataMonth] = useState(month);
   const [cityIncludes, setCityIncludes] = useState(null);   // null = all
   const [yoyIncludes, setYoyIncludes]   = useState(null);   // null = all
 
   const toggle = (key) => setSections(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const isYear          = viewMode === 'year';
+  const isYearInProgress = isYear && year === new Date().getFullYear();
+  const throughMonth    = isYearInProgress ? lastDataMonth : month;
 
   useEffect(() => {
     Promise.all([
@@ -103,16 +108,18 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
       const totals = Array(12).fill(0);
       [...city, ...agency].forEach(r => { if (r.month >= 1 && r.month <= 12) totals[r.month - 1] += r.total; });
       setMonthlyTotals(totals);
+      const lastMonth = totals.reduce((max, v, i) => (v > 0 ? i + 1 : max), 0);
+      setLastDataMonth(lastMonth > 0 ? lastMonth : month);
     }).catch(() => {});
+  }, [year]);
 
-    apiFetch(`/api/trends?mode=ytd&compareYear=${year}&throughMonth=${month}&type=city`)
+  useEffect(() => {
+    apiFetch(`/api/trends?mode=ytd&compareYear=${year}&throughMonth=${throughMonth}&type=city`)
       .then(r => r.json()).then(setYoyData).catch(() => {});
-  }, [year, month]);
+  }, [year, throughMonth]);
 
-  const isYear          = viewMode === 'year';
-  const isYearInProgress = isYear && year === new Date().getFullYear();
   const period       = isYear
-    ? (isYearInProgress ? `Year-to-Date ${year} (Jan–${SHORT[new Date().getMonth()]})` : `Full Year ${year}`)
+    ? (isYearInProgress ? `Year-to-Date ${year} (Jan–${SHORT[lastDataMonth - 1]})` : `Full Year ${year}`)
     : `${MONTHS[month - 1]} ${year}`;
   const hospitalName = hospitalConfig?.name ?? 'Baylor Scott & White Medical Center — Grapevine';
 
@@ -351,8 +358,8 @@ export default function ExportModal({ stats, prevStats, prevAgencyStats = [], ag
                 <div className="report-trend-bars">
                   {monthlyTotals.map((v, i) => {
                     const barH    = v > 0 ? Math.max(6, Math.round((v / maxBar) * 64)) : 3;
-                    const isCur   = isYearInProgress ? i === new Date().getMonth() : i === month - 1;
-                    const isFuture = isYearInProgress ? i > new Date().getMonth() : (i > month - 1 && !isYear);
+                    const isCur   = isYearInProgress ? i === lastDataMonth - 1 : i === month - 1;
+                    const isFuture = isYearInProgress ? i > lastDataMonth - 1 : (i > month - 1 && !isYear);
                     return (
                       <div key={i} className="report-trend-col">
                         {v > 0 && <span className="report-trend-val">{v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}</span>}
