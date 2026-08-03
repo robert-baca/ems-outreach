@@ -54,9 +54,13 @@ function AppInner() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     const isYear = viewMode === 'year';
-    const mParam = isYear ? '' : `&month=${month}`;
+    const isYearInProgress = isYear && year === now.getFullYear();
+    const throughMonth = now.getMonth() + 1;
+    const mParam = isYear ? (isYearInProgress ? `&throughMonth=${throughMonth}` : '') : `&month=${month}`;
     const { month: pm, year: py } = prevMonthYear(month, year);
-    const prevParam = isYear ? `year=${year - 1}` : `month=${pm}&year=${py}`;
+    const prevParam = isYear
+      ? (isYearInProgress ? `year=${year - 1}&throughMonth=${throughMonth}` : `year=${year - 1}`)
+      : `month=${pm}&year=${py}`;
     try {
       const [sRes, tRes, pRes, asRes, atRes, paRes] = await Promise.all([
         apiFetch(`/api/stats?${mParam ? mParam.slice(1) + '&' : ''}year=${year}&type=city`),

@@ -112,7 +112,7 @@ export async function getTransports({ month, year, type = 'city', city }, hospit
   `;
 }
 
-export async function getStats({ month, year, type = 'city' }, hospitalId = 'grapevine') {
+export async function getStats({ month, year, throughMonth, type = 'city' }, hospitalId = 'grapevine') {
   const sql = db();
   await initDB();
   if (month) {
@@ -120,6 +120,16 @@ export async function getStats({ month, year, type = 'city' }, hospitalId = 'gra
       SELECT MAX(city) AS city, MAX(county) AS county, SUM(transport_count)::int AS total
       FROM transports
       WHERE month = ${+month} AND year = ${+year}
+        AND COALESCE(type, 'city') = ${type}
+        AND hospital_id = ${hospitalId}
+      GROUP BY LOWER(city) ORDER BY total DESC
+    `;
+  }
+  if (throughMonth) {
+    return sql`
+      SELECT MAX(city) AS city, MAX(county) AS county, SUM(transport_count)::int AS total
+      FROM transports
+      WHERE year = ${+year} AND month <= ${+throughMonth}
         AND COALESCE(type, 'city') = ${type}
         AND hospital_id = ${hospitalId}
       GROUP BY LOWER(city) ORDER BY total DESC
